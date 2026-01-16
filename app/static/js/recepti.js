@@ -31,7 +31,6 @@ const searchInput = document.getElementById('searchInput');
 const maxMinutasInput = document.getElementById('maxMinutasInput');
 const searchBtn = document.querySelector('.search-btn');
 const favoritesFilterBtn = document.getElementById('favoritesFilterBtn');
-const favoriteButtons = document.querySelectorAll('.favorite-btn');
 
 // Load saved recipes (favorites) from backend
 async function loadSavedRecipes() {
@@ -191,9 +190,9 @@ function getDietTypeLabel(dietType) {
 
 // Update favorite button UI
 function updateFavoriteButtons() {
-    favoriteButtons.forEach(btn => {
+    document.querySelectorAll('.favorite-btn').forEach(btn => {
         const recipeId = btn.dataset.recipe;
-        if (favorites.includes(recipeId)) {
+        if (favorites.includes(recipeId.toString())) {
             btn.classList.add('active');
             btn.innerHTML = '<i class="fas fa-heart"></i>';
         } else {
@@ -202,60 +201,6 @@ function updateFavoriteButtons() {
         }
     });
 }
-
-// Favorite Button Handler
-favoriteButtons.forEach(btn => {
-    btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        
-        // Check if user is logged in
-        if (!authState.isLoggedIn) {
-            const authPopup = document.getElementById('authPopup');
-            if (authPopup) {
-                const loginForm = document.getElementById('loginForm');
-                const signupForm = document.getElementById('signupForm');
-                authPopup.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-                loginForm.classList.add('active');
-                signupForm.classList.remove('active');
-                document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-                document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-            }
-            return;
-        }
-        
-        const recipeId = btn.dataset.recipe;
-        const isCurrentlyFavorited = btn.classList.contains('active');
-        
-        try {
-            const method = isCurrentlyFavorited ? 'DELETE' : 'POST';
-            const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}/save`, {
-                method: method,
-                credentials: 'include'
-            });
-            
-            if (response.ok) {
-                // Toggle UI
-                if (isCurrentlyFavorited) {
-                    btn.classList.remove('active');
-                    btn.innerHTML = '<i class="far fa-heart"></i>';
-                    favorites = favorites.filter(id => id !== recipeId);
-                } else {
-                    btn.classList.add('active');
-                    btn.innerHTML = '<i class="fas fa-heart"></i>';
-                    favorites.push(recipeId);
-                }
-                saveFavorites();
-                console.log('Favorite toggled for:', recipeId);
-            } else {
-                showCustomAlert('Greška pri dodavanju u favorite', 'Greška');
-            }
-        } catch (error) {
-            console.error('Error toggling favorite:', error);
-            showCustomAlert('Greška pri dodavanju u favorite', 'Greška');
-        }
-    });
-});
 
 // Filter Dropdown Handlers
 tipObrokaFilter.addEventListener('change', (e) => {
@@ -476,7 +421,8 @@ function handleFavoriteClick(e) {
             }
             
             updateFavoriteButtons();
-            showCustomAlert('Uspešno', 'Dodan u favorite');
+            const message = isCurrentlyFavorite ? 'Uklonjeno iz favorita' : 'Dodan u favorite';
+            showCustomAlert('Uspešno', message);
             console.log('Recipe favorite toggled for:', recipeId, 'Favorites:', favorites);
         } else {
             showCustomAlert('Greška pri dodavanju u favorite', 'Greška');

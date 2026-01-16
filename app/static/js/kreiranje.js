@@ -26,6 +26,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     await fetchAndDisplayUserRecipes();
 });
 
+// Refresh recipes when navigating back to the page (bfcache)
+window.addEventListener('pageshow', async () => {
+    const isLoggedIn = await checkAuthStatus();
+    if (isLoggedIn) {
+        await fetchAndDisplayUserRecipes();
+    }
+});
+
 // Check if user is logged in before allowing access
 // Fetch and display user's created recipes
 async function fetchAndDisplayUserRecipes() {
