@@ -300,13 +300,20 @@ function normalizeImageUrl(imageUrl) {
     if (!imageUrl) {
         return '../static/images/logo 5.png';
     }
+    const staticIndex = imageUrl.indexOf('/static/');
+    if (staticIndex >= 0) {
+        return imageUrl.substring(staticIndex);
+    }
+    if (imageUrl.startsWith('static/')) {
+        return `/${imageUrl}`;
+    }
+    if (imageUrl.startsWith('/static/')) {
+        return imageUrl;
+    }
     if (imageUrl.startsWith('http')) {
         return imageUrl;
     }
-    if (imageUrl.startsWith('/static/') || imageUrl.startsWith('static/')) {
-        return `${API_BASE_URL}/${imageUrl.replace(/^\//, '')}`;
-    }
-    return `${API_BASE_URL}/static/uploads/${imageUrl}`;
+    return `/static/uploads/${imageUrl}`;
 }
 
 // Recipe Creation Form Handler
