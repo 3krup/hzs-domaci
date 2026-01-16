@@ -208,8 +208,14 @@ def add_recipe(current_user_id):
                         cursor.execute("INSERT INTO recipe_ingredients (recipe_id, ingredient_id) VALUES (%s, %s)", (new_recipe_id, ing_id))
                     except mysql.connector.IntegrityError: pass
 
+            # Auto-save (favorite) the recipe the user just created
+            try:
+                cursor.execute("INSERT INTO saved_recipes (user_id, recipe_id) VALUES (%s, %s)", (current_user_id, new_recipe_id))
+            except mysql.connector.IntegrityError:
+                pass
+
             conn.commit()
-            return jsonify({'message': 'Recept uspešno dodat!'}), 201
+            return jsonify({'message': 'Recept uspešno dodat!', 'recipe_id': new_recipe_id}), 201
         except MySQLError as e:
             return jsonify({'message': f'Greška u bazi: {e}'}), 500
         finally:

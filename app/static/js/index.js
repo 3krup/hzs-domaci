@@ -122,6 +122,36 @@ function loadFavorites() {
     }
 }
 
+// Load favorites from backend
+async function loadFavoritesFromBackend() {
+    if (!authState.isLoggedIn) {
+        loadFavorites(); // Fallback to localStorage if not logged in
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/my-recipes`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const recipes = await response.json();
+            favorites = recipes.map(r => r.id.toString());
+            saveFavorites();
+            updateFavoriteButtons();
+            console.log('Loaded favorites from backend:', favorites);
+        } else {
+            // Fallback to localStorage
+            loadFavorites();
+        }
+    } catch (error) {
+        console.error('Error loading favorites:', error);
+        // Fallback to localStorage
+        loadFavorites();
+    }
+}
+
 // Save favorites to localStorage
 function saveFavorites() {
     localStorage.setItem('favorites', JSON.stringify(favorites));
@@ -143,7 +173,7 @@ function updateFavoriteButtons() {
 
 // Favorite Button Handler
 favoriteButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         
         // Check if user is logged in
@@ -158,16 +188,35 @@ favoriteButtons.forEach(btn => {
         }
         
         const recipeId = btn.dataset.recipe;
+        const isCurrentlyFavorited = btn.classList.contains('active');
         
-        if (favorites.includes(recipeId)) {
-            favorites = favorites.filter(id => id !== recipeId);
-        } else {
-            favorites.push(recipeId);
+        try {
+            const method = isCurrentlyFavorited ? 'DELETE' : 'POST';
+            const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}/save`, {
+                method: method,
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                // Toggle UI
+                if (isCurrentlyFavorited) {
+                    btn.classList.remove('active');
+                    btn.innerHTML = '<i class="far fa-heart"></i>';
+                    favorites = favorites.filter(id => id !== recipeId);
+                } else {
+                    btn.classList.add('active');
+                    btn.innerHTML = '<i class="fas fa-heart"></i>';
+                    favorites.push(recipeId);
+                }
+                saveFavorites();
+                console.log('Favorite toggled for:', recipeId);
+            } else {
+                showCustomAlert('Greška pri dodavanju u favorite', 'Greška');
+            }
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+            showCustomAlert('Greška pri dodavanju u favorite', 'Greška');
         }
-        
-        saveFavorites();
-        updateFavoriteButtons();
-        console.log('Favorite toggled for:', recipeId, 'Favorites:', favorites);
     });
 });
 
@@ -568,5 +617,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check authentication status and update UI
     await initializeAuth();
     
-    loadFavorites();
+    // Load favorites from backend if logged in, otherwise from localStorage
+    await loadFavoritesFromBackend();
 });

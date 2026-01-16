@@ -296,6 +296,36 @@ function loadFavorites() {
     }
 }
 
+// Load favorites from backend
+async function loadFavoritesFromBackend() {
+    if (!authState.isLoggedIn) {
+        loadFavorites(); // Fallback to localStorage if not logged in
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/my-recipes`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const recipes = await response.json();
+            favorites = recipes.map(r => r.id.toString());
+            saveFavorites();
+            updateFavoriteButtons();
+            console.log('Loaded favorites from backend:', favorites);
+        } else {
+            // Fallback to localStorage
+            loadFavorites();
+        }
+    } catch (error) {
+        console.error('Error loading favorites:', error);
+        // Fallback to localStorage
+        loadFavorites();
+    }
+}
+
 // Save favorites to localStorage
 function saveFavorites() {
     localStorage.setItem('favorites', JSON.stringify(favorites));
@@ -317,7 +347,7 @@ function updateFavoriteButtons() {
 
 // Favorite Button Handler
 favoriteButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
+    btn.addEventListener('click', async (e) => {
         e.stopPropagation();
         
         // Check if user is logged in
@@ -337,18 +367,35 @@ favoriteButtons.forEach(btn => {
         }
         
         const recipeId = btn.dataset.recipe;
+        const isCurrentlyFavorited = btn.classList.contains('active');
         
-        if (favorites.includes(recipeId)) {
-            favorites = favorites.filter(id => id !== recipeId);
-        } else {
-            favorites.push(recipeId);
+        try {
+            const method = isCurrentlyFavorited ? 'DELETE' : 'POST';
+            const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}/save`, {
+                method: method,
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                // Toggle UI
+                if (isCurrentlyFavorited) {
+                    btn.classList.remove('active');
+                    btn.innerHTML = '<i class="far fa-heart"></i>';
+                    favorites = favorites.filter(id => id !== recipeId);
+                } else {
+                    btn.classList.add('active');
+                    btn.innerHTML = '<i class="fas fa-heart"></i>';
+                    favorites.push(recipeId);
+                }
+                saveFavorites();
+                console.log('Favorite toggled for:', recipeId);
+            } else {
+                showCustomAlert('Greška pri dodavanju u favorite', 'Greška');
+            }
+        } catch (error) {
+            console.error('Error toggling favorite:', error);
+            showCustomAlert('Greška pri dodavanju u favorite', 'Greška');
         }
-        
-        saveFavorites();
-        updateFavoriteButtons();
-        
-        // TODO: Send to backend when implemented
-        console.log('Favorite toggled for:', recipeId, 'Favorites:', favorites);
     });
 });
 
@@ -516,6 +563,9 @@ function displayRecipes(recipes) {
     // Re-attach favorite button listeners
     attachFavoriteButtonListeners();
     updateFavoriteButtons();
+    
+    // Attach details button listeners
+    attachDetailsButtonListeners();
 }
 
 function attachFavoriteButtonListeners() {
@@ -571,6 +621,124 @@ function handleFavoriteClick(e) {
         console.error('Error saving favorite:', error);
     });
 }
+
+function attachDetailsButtonListeners() {
+    const detailsButtons = document.querySelectorAll('.btn-recipe-details');
+    
+    detailsButtons.forEach(btn => {
+        btn.addEventListener('click', handleDetailsClick);
+    });
+}
+
+function handleDetailsClick(e) {
+    e.stopPropagation();
+    
+    const card = this.closest('.recipe-card');
+    const recipeId = card.dataset.recipe;
+    
+    // Get image from the card directly (already has correct path)
+    const cardImage = card.querySelector('img');
+    const cardImageSrc = cardImage ? cardImage.src : '';
+    
+    // First check if it's a hardcoded recipe
+    let recipe = recipes[recipeId];
+    
+    if (recipe) {
+        // Handle hardcoded recipe
+        document.getElementById('popupImage').src = cardImageSrc || recipe.image;
+        document.getElementById('popupImage').alt = recipe.title;
+        document.getElementById('popupTitle').textContent = recipe.title;
+        
+        // Set stats
+        const popupStats = document.getElementById('popupStats');
+        const kcal = recipe.nutrition['Kcal'] || recipe.calories;
+        const protein = recipe.nutrition['Protein'] || recipe.protein;
+        const fats = recipe.nutrition['Masti'] || recipe.fats;
+        
+        popupStats.innerHTML = `
+            <div style="display: flex; gap: 20px;">
+                <div>
+                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${kcal}</span>
+                    <span style="color: #666; margin-left: 5px;">kcal</span>
+                </div>
+                <div>
+                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${protein}</span>
+                    <span style="color: #666; margin-left: 5px;">protein</span>
+                </div>
+                <div>
+                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${fats}</span>
+                    <span style="color: #666; margin-left: 5px;">masti</span>
+                </div>
+            </div>
+        `;
+        
+        // Set ingredients
+        const ingredientsList = document.getElementById('ingredientsList');
+        ingredientsList.innerHTML = recipe.ingredients
+            .map(ingredient => `<li>${ingredient}</li>`)
+            .join('');
+        
+        // Set instructions
+        const instructionsList = document.getElementById('instructionsList');
+        instructionsList.innerHTML = recipe.instructions
+            .map((step, index) => `<li>${step}</li>`)
+            .join('');
+        
+        // Set nutrition
+        const nutritionGrid = document.getElementById('nutritionGrid');
+        nutritionGrid.innerHTML = Object.entries(recipe.nutrition)
+            .map(([key, value]) => `
+                <div class="nutrition-item">
+                    <span class="label">${key}</span>
+                    <span class="value">${value}</span>
+                </div>
+            `)
+            .join('');
+        
+        recipePopup.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    } else {
+        // For database recipes, show basic info
+        const title = card.querySelector('h3').textContent;
+        const stats = card.querySelectorAll('.stat');
+        
+        document.getElementById('popupImage').src = cardImageSrc;
+        document.getElementById('popupImage').alt = title;
+        document.getElementById('popupTitle').textContent = title;
+        
+        // Set stats from card
+        const popupStats = document.getElementById('popupStats');
+        const kcal = stats[0]?.querySelector('.value').textContent;
+        const protein = stats[1]?.querySelector('.value').textContent;
+        const fats = stats[2]?.querySelector('.value').textContent;
+        
+        popupStats.innerHTML = `
+            <div style="display: flex; gap: 20px;">
+                <div>
+                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${kcal}</span>
+                    <span style="color: #666; margin-left: 5px;">kcal</span>
+                </div>
+                <div>
+                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${protein}</span>
+                    <span style="color: #666; margin-left: 5px;">protein</span>
+                </div>
+                <div>
+                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${fats}</span>
+                    <span style="color: #666; margin-left: 5px;">masti</span>
+                </div>
+            </div>
+        `;
+        
+        // Clear ingredients/instructions for database recipes (not available)
+        document.getElementById('ingredientsList').innerHTML = '<li>Detalji recepta nisu dostupni</li>';
+        document.getElementById('instructionsList').innerHTML = '<li>Detalji recepta nisu dostupni</li>';
+        document.getElementById('nutritionGrid').innerHTML = '';
+        
+        recipePopup.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
 
 // Search Button Click
 searchBtn.addEventListener('click', (e) => {
@@ -1013,13 +1181,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup auth buttons
     setupAuthButtons();
     
-    // Fetch recipes from database
-    const recipesLoaded = await fetchAllRecipes();
+    // Load favorites from backend if logged in, otherwise from localStorage
+    await loadFavoritesFromBackend();
     
-    // If database fetch failed, fall back to hardcoded recipes
-    if (!recipesLoaded) {
-        console.log('Using fallback hardcoded recipes');
-    }
-    
-    loadFavorites();
+    // Apply filters (which will fetch and display recipes)
+    await applyFilters();
 });
