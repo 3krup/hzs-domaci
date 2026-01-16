@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, make_response
+from flask import Flask, request, jsonify, make_response, render_template, send_from_directory
 import mysql.connector
 from mysql.connector import Error as MySQLError
 import jwt
@@ -6,11 +6,13 @@ import bcrypt
 import datetime
 from functools import wraps
 import os
+import sys
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
 from dotenv import load_dotenv
-import sys
+
 load_dotenv()
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import config
@@ -24,6 +26,22 @@ app.config['UPLOAD_FOLDER'] = config.UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = config.MAX_CONTENT_LENGTH
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/index.html')
+def home_redirect():
+    return render_template('index.html')
+
+@app.route('/recepti.html')
+def recipes_page():
+    return render_template('recepti.html')
+
+@app.route('/kreiranje.html')
+def create_page():
+    return render_template('kreiranje.html')
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in config.ALLOWED_EXTENSIONS
@@ -157,19 +175,22 @@ def add_recipe(current_user_id):
         protein = request.form.get('protein', 0)
         fat = request.form.get('fat', 0)
         ingredients_raw = request.form.get('ingredients', '')
+
         is_posno = 1 if request.form.get('is_posno') == '1' else 0
         is_halal = 1 if request.form.get('is_halal') == '1' else 0
+        is_vegetarian = 1 if request.form.get('is_vegetarian') == '1' else 0
+        is_vegan = 1 if request.form.get('is_vegan') == '1' else 0
 
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
             sql = """
                   INSERT INTO recipes
-                  (user_id, title, description, preparation_steps, difficulty, kcal, protein, fat, image_url, is_posno, is_halal, meal_type)
-                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                  (user_id, title, description, preparation_steps, difficulty, kcal, protein, fat, image_url, is_posno, is_halal, is_vegetarian, is_vegan, meal_type)
+                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                   """
             cursor.execute(sql, (
-                current_user_id, title, description, steps, difficulty, kcal, protein, fat, unique_filename, is_posno, is_halal, meal_type
+                current_user_id, title, description, steps, difficulty, kcal, protein, fat, unique_filename, is_posno, is_halal, is_vegetarian, is_vegan, meal_type
             ))
             new_recipe_id = cursor.lastrowid
 
@@ -271,6 +292,9 @@ def search_recipes():
     ingredients_input = request.args.get('ingredients')
     difficulty = request.args.get('difficulty')
     is_posno = request.args.get('posno')
+    is_halal = request.args.get('halal')
+    is_vegetarian = request.args.get('vegetarian')
+    is_vegan = request.args.get('vegan')
     max_time = request.args.get('max_time')
 
     meal_type = request.args.get('meal_type')
@@ -298,6 +322,15 @@ def search_recipes():
 
     if is_posno == '1' or is_posno == 'true':
         conditions.append("r.is_posno = 1")
+
+    if is_halal == '1' or is_halal == 'true':
+        conditions.append("r.is_halal = 1")
+
+    if is_vegetarian == '1' or is_vegetarian == 'true':
+        conditions.append("r.is_vegetarian = 1")
+
+    if is_vegan == '1' or is_vegan == 'true':
+        conditions.append("r.is_vegan = 1")
 
     if max_time:
         conditions.append("r.prep_time_minutes <= %s")
