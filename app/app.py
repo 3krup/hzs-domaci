@@ -170,6 +170,7 @@ def add_recipe(current_user_id):
         difficulty = request.form.get('difficulty', 'Srednje')
 
         meal_type = request.form.get('meal_type')
+        prep_time_minutes = request.form.get('prep_time_minutes', 0)
 
         kcal = request.form.get('kcal', 0)
         protein = request.form.get('protein', 0)
@@ -186,11 +187,11 @@ def add_recipe(current_user_id):
         try:
             sql = """
                   INSERT INTO recipes
-                  (user_id, title, description, preparation_steps, difficulty, kcal, protein, fat, image_url, is_posno, is_halal, is_vegetarian, is_vegan, meal_type)
-                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                  (user_id, title, description, preparation_steps, prep_time_minutes, difficulty, kcal, protein, fat, image_url, is_posno, is_halal, is_vegetarian, is_vegan, meal_type)
+                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                   """
             cursor.execute(sql, (
-                current_user_id, title, description, steps, difficulty, kcal, protein, fat, unique_filename, is_posno, is_halal, is_vegetarian, is_vegan, meal_type
+                current_user_id, title, description, steps, prep_time_minutes, difficulty, kcal, protein, fat, unique_filename, is_posno, is_halal, is_vegetarian, is_vegan, meal_type
             ))
             new_recipe_id = cursor.lastrowid
 

@@ -56,18 +56,148 @@ async function fetchAndDisplayUserRecipes() {
             const recipeCard = createRecipeCard(recipe);
             recipesGrid.appendChild(recipeCard);
         });
+        
+        // Attach event listeners to newly created cards
+        attachCreatedRecipeListeners();
     } catch (error) {
         console.error('Error fetching recipes:', error);
     }
 }
 
+function attachCreatedRecipeListeners() {
+    // Attach favorite button listeners
+    const favoriteButtons = document.querySelectorAll('.recipe-card .favorite-btn');
+    favoriteButtons.forEach(btn => {
+        btn.addEventListener('click', handleCreatedRecipeFavoriteClick);
+    });
+    
+    // Attach details button listeners
+    const detailsButtons = document.querySelectorAll('.recipe-card .btn-recipe-details');
+    detailsButtons.forEach(btn => {
+        btn.addEventListener('click', handleCreatedRecipeDetailsClick);
+    });
+}
+
+function handleCreatedRecipeFavoriteClick(e) {
+    e.stopPropagation();
+    
+    const recipeId = parseInt(this.dataset.recipe, 10);
+    console.log('Favorite click for recipe:', recipeId);
+    
+    fetch(`${API_BASE_URL}/saved-recipes`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ recipe_id: recipeId })
+    })
+    .then(response => {
+        if (response.ok) {
+            this.classList.add('active');
+            this.innerHTML = '<i class="fas fa-heart"></i>';
+            console.log('Recipe added to favorites:', recipeId);
+        } else {
+            console.error('Failed to save favorite');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving favorite:', error);
+    });
+}
+
+function handleCreatedRecipeDetailsClick(e) {
+    e.stopPropagation();
+    
+    const card = this.closest('.recipe-card');
+    const recipeId = card.dataset.recipe;
+    
+    // Get image from the card directly
+    const cardImage = card.querySelector('img');
+    const cardImageSrc = cardImage ? cardImage.src : '';
+    
+    const title = card.querySelector('h3').textContent;
+    
+    // Show loading state
+    document.getElementById('popupImage').src = cardImageSrc;
+    document.getElementById('popupImage').alt = title;
+    document.getElementById('popupTitle').textContent = title;
+    document.getElementById('popupDescription').textContent = 'Učitavanje detalja...';
+    document.getElementById('ingredientsList').innerHTML = '<li>Učitavanje...</li>';
+    document.getElementById('instructionsList').innerHTML = '<li>Učitavanje...</li>';
+    document.getElementById('nutritionGrid').innerHTML = '';
+    
+    recipePopup.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // Fetch full recipe details from backend
+    fetch(`${API_BASE_URL}/recipes/${recipeId}`)
+        .then(response => response.json())
+        .then(recipe => {
+            // Update description
+            document.getElementById('popupDescription').textContent = recipe.description || 'Nema dostupnog opisa';
+            
+            // Update ingredients
+            if (recipe.ingredients && recipe.ingredients.length > 0) {
+                const ingredientsHTML = recipe.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('');
+                document.getElementById('ingredientsList').innerHTML = ingredientsHTML;
+            } else {
+                document.getElementById('ingredientsList').innerHTML = '<li>Nema dostupnih sastojaka</li>';
+            }
+            
+            // Update instructions
+            if (recipe.instructions && recipe.instructions.length > 0) {
+                const instructionsHTML = recipe.instructions.map(instruction => `<li>${instruction}</li>`).join('');
+                document.getElementById('instructionsList').innerHTML = instructionsHTML;
+            } else {
+                document.getElementById('instructionsList').innerHTML = '<li>Nema dostupnih uputstava</li>';
+            }
+            
+            // Update nutrition info
+            const popupStats = document.getElementById('popupStats');
+            popupStats.innerHTML = `
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    ${recipe.kcal !== null ? `<div>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.kcal}</span>
+                        <span style="color: #666; margin-left: 5px;">kcal</span>
+                    </div>` : ''}
+                    ${recipe.protein !== null ? `<div>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.protein}</span>
+                        <span style="color: #666; margin-left: 5px;">g proteina</span>
+                    </div>` : ''}
+                    ${recipe.fat !== null ? `<div>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.fat}</span>
+                        <span style="color: #666; margin-left: 5px;">g masti</span>
+                    </div>` : ''}
+                </div>
+            `;
+            
+            // Build nutrition grid
+            let nutritionHTML = '';
+            if (recipe.kcal !== null) nutritionHTML += `<div class="nutrition-item"><span class="label">Kalorije</span><span class="value">${recipe.kcal} kcal</span></div>`;
+            if (recipe.protein !== null) nutritionHTML += `<div class="nutrition-item"><span class="label">Proteini</span><span class="value">${recipe.protein}g</span></div>`;
+            if (recipe.fat !== null) nutritionHTML += `<div class="nutrition-item"><span class="label">Masti</span><span class="value">${recipe.fat}g</span></div>`;
+            
+            if (nutritionHTML) {
+                document.getElementById('nutritionGrid').innerHTML = nutritionHTML;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching recipe details:', error);
+            document.getElementById('popupDescription').textContent = 'Greška pri učitavanju detalja';
+            document.getElementById('ingredientsList').innerHTML = '<li>Greška pri učitavanju</li>';
+            document.getElementById('instructionsList').innerHTML = '<li>Greška pri učitavanju</li>';
+        });
+}
+
 function createRecipeCard(recipe) {
     const mealTypeLabel = getMealTypeLabel(recipe.meal_type);
     const difficultyLabel = getDifficultyLabel(recipe.difficulty);
-    const dietLabel = getDietTypeLabel(recipe.diet_type);
+    const dietLabel = getDietTypeLabel(recipe);
     
     const card = document.createElement('div');
     card.className = 'recipe-card';
+    card.dataset.recipe = recipe.id;
     card.innerHTML = `
         <div class="recipe-image">
             <img src="${API_BASE_URL}/uploads/${recipe.image_url}" alt="${recipe.title}">
@@ -94,6 +224,10 @@ function createRecipeCard(recipe) {
                     <span class="value">${recipe.fat}g</span>
                     <span class="label">masti</span>
                 </div>
+                ${recipe.prep_time_minutes ? `<div class="stat">
+                    <span class="value">${recipe.prep_time_minutes}</span>
+                    <span class="label">min</span>
+                </div>` : ''}
             </div>
             <p class="difficulty"><i class="fas fa-signal"></i> Slozenost: ${difficultyLabel}</p>
             <button class="btn-recipe-details">Detaljnije</button>
@@ -122,14 +256,13 @@ function getDifficultyLabel(difficulty) {
     return labels[difficulty] || difficulty;
 }
 
-function getDietTypeLabel(dietType) {
-    const labels = {
-        'posno': 'Posno',
-        'vegetarijansko': 'Vegetarijansko',
-        'vegansko': 'Vegansko',
-        'halal': 'Halal'
-    };
-    return labels[dietType] || dietType;
+function getDietTypeLabel(recipe) {
+    // Handle boolean diet fields from database
+    if (recipe.is_vegan) return 'Vegansko';
+    if (recipe.is_vegetarian) return 'Vegetarijansko';
+    if (recipe.is_posno) return 'Posno';
+    if (recipe.is_halal) return 'Halal';
+    return 'Ostalo';
 }
 
 // Recipe Creation Form Handler
@@ -316,11 +449,18 @@ class RecipeCreator {
         formData.append('title', this.recipeData.name);
         formData.append('difficulty', this.recipeData.difficulty);
         formData.append('meal_type', this.recipeData.mealType);
+        formData.append('prep_time_minutes', this.recipeData.prepTime);
         formData.append('kcal', this.recipeData.nutrition.kcal);
         formData.append('protein', this.recipeData.nutrition.protein);
         formData.append('fat', this.recipeData.nutrition.masti);
         formData.append('ingredients', this.recipeData.ingredients.join('\n'));
         formData.append('preparation_steps', this.recipeData.instructions.join('\n'));
+        
+        // Convert diet type to boolean fields
+        formData.append('is_posno', this.recipeData.dietType === 'posno' ? 1 : 0);
+        formData.append('is_halal', this.recipeData.dietType === 'halal' ? 1 : 0);
+        formData.append('is_vegetarian', this.recipeData.dietType === 'vegetarijansko' ? 1 : 0);
+        formData.append('is_vegan', this.recipeData.dietType === 'vegansko' ? 1 : 0);
         
         // Send to API
         await this.sendToAPI(formData);

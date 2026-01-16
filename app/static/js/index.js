@@ -235,6 +235,10 @@ loginForm.addEventListener('submit', async (e) => {
             
             // Re-setup button listeners since buttons have changed
             setupAuthButtons();
+
+            // Refresh favorites and update buttons
+            await loadFavoritesFromBackend();
+            updateFavoriteButtons();
             
             // Show success message
             showCustomAlert('Uspešno ste se prijavljeni!', 'Prijava');
@@ -411,24 +415,45 @@ function displayLatestRecipes() {
         const card = document.createElement('div');
         card.className = 'recipe-card';
         card.dataset.recipe = recipe.id;
+
+        const isFavorited = favorites.includes(recipe.id.toString());
+        const mealTypeLabel = getMealTypeLabel(recipe.meal_type);
+        const difficultyLabel = getDifficultyLabel(recipe.difficulty);
+        const dietLabel = getDietTypeLabel(recipe);
+
         card.innerHTML = `
-            <img src="${recipe.image_url}" alt="${recipe.title}" class="recipe-image">
-            <div class="recipe-card-body">
-                <h3 class="recipe-title">${recipe.title}</h3>
+            <div class="recipe-image">
+                <img src="${recipe.image_url}" alt="${recipe.title}">
+                <button class="favorite-btn ${isFavorited ? 'active' : ''}" data-recipe="${recipe.id}">
+                    <i class="${isFavorited ? 'fas' : 'far'} fa-heart"></i>
+                </button>
+            </div>
+            <div class="recipe-info">
+                <div class="recipe-tags">
+                    <span class="tag tag-meal">${mealTypeLabel}</span>
+                    <span class="tag tag-diet">${dietLabel}</span>
+                </div>
+                <h3>${recipe.title}</h3>
                 <div class="recipe-stats">
-                    <span class="stat">
-                        <i class="fas fa-fire"></i> ${recipe.kcal} kcal
-                    </span>
-                    <span class="stat">
-                        <i class="fas fa-egg"></i> ${recipe.protein}g protein
-                    </span>
+                    <div class="stat">
+                        <span class="value">${recipe.kcal}</span>
+                        <span class="label">kcal</span>
+                    </div>
+                    <div class="stat">
+                        <span class="value">${recipe.protein}g</span>
+                        <span class="label">protein</span>
+                    </div>
+                    <div class="stat">
+                        <span class="value">${recipe.fat}g</span>
+                        <span class="label">masti</span>
+                    </div>
+                    ${recipe.prep_time_minutes ? `<div class="stat">
+                        <span class="value">${recipe.prep_time_minutes}</span>
+                        <span class="label">min</span>
+                    </div>` : ''}
                 </div>
-                <div class="recipe-buttons">
-                    <button class="btn btn-recipe-details">Detaljnije</button>
-                    <button class="favorite-btn" data-recipe="${recipe.id}">
-                        <i class="far fa-heart"></i>
-                    </button>
-                </div>
+                <p class="difficulty"><i class="fas fa-signal"></i> Slozenost: ${difficultyLabel}</p>
+                <button class="btn-recipe-details">Detaljnije</button>
             </div>
         `;
         recipesContainer.appendChild(card);
@@ -438,131 +463,170 @@ function displayLatestRecipes() {
     attachRecipeCardListeners();
 }
 
-// Attach listeners to recipe cards
-function attachRecipeCardListeners() {
-    // Detach old listeners
-    const oldCards = document.querySelectorAll('.recipe-card');
-    oldCards.forEach(card => {
-        const newCard = card.cloneNode(true);
-        card.parentNode.replaceChild(newCard, card);
-    });
-    
-    // Attach click handlers to details buttons
-    document.querySelectorAll('.recipe-card').forEach(card => {
-        card.addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn-recipe-details')) {
-                const recipeId = card.dataset.recipe;
-                const recipe = latestRecipes.find(r => r.id == recipeId);
-                
-                if (recipe) {
-                    document.getElementById('popupImage').src = recipe.image_url;
-                    document.getElementById('popupImage').alt = recipe.title;
-                    document.getElementById('popupTitle').textContent = recipe.title;
-                    
-                    const popupStats = document.getElementById('popupStats');
-                    popupStats.innerHTML = `
-                        <div style="display: flex; gap: 20px;">
-                            <div>
-                                <span style="font-size: 1.2rem; font-weight: bold; color: #4CAF50;">${recipe.kcal}</span>
-                                <span style="color: #666; margin-left: 5px;">kcal</span>
-                            </div>
-                            <div>
-                                <span style="font-size: 1.2rem; font-weight: bold; color: #4CAF50;">${recipe.protein}g</span>
-                                <span style="color: #666; margin-left: 5px;">protein</span>
-                            </div>
-                            <div>
-                                <span style="font-size: 1.2rem; font-weight: bold; color: #4CAF50;">${recipe.fat}g</span>
-                                <span style="color: #666; margin-left: 5px;">masti</span>
-                            </div>
-                        </div>
-                    `;
-                    
-                    const popupDescription = document.getElementById('popupDescription');
-                    if (popupDescription && recipe.description) {
-                        popupDescription.textContent = recipe.description;
-                        popupDescription.style.display = 'block';
-                    } else if (popupDescription) {
-                        popupDescription.style.display = 'none';
-                    }
-                    
-                    const ingredientsList = document.getElementById('ingredientsList');
-                    ingredientsList.innerHTML = '<li>Pogledajte detaljnije za više informacija</li>';
-                    
-                    const instructionsList = document.getElementById('instructionsList');
-                    instructionsList.innerHTML = '<li>Pogledajte detaljnije za više informacija</li>';
-                    
-                    const nutritionGrid = document.getElementById('nutritionGrid');
-                    nutritionGrid.innerHTML = `
-                        <div class="nutrition-item">
-                            <span class="label">Kcal</span>
-                            <span class="value">${recipe.kcal}</span>
-                        </div>
-                        <div class="nutrition-item">
-                            <span class="label">Protein</span>
-                            <span class="value">${recipe.protein}g</span>
-                        </div>
-                        <div class="nutrition-item">
-                            <span class="label">Masti</span>
-                            <span class="value">${recipe.fat}g</span>
-                        </div>
-                    `;
-                    
-                    recipePopup.style.display = 'flex';
-                    document.body.style.overflow = 'hidden';
-                }
-            }
-        });
-    });
-    
-    // Attach favorite button listeners
-    document.querySelectorAll('.recipe-card .favorite-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            e.stopPropagation();
-            
-            if (!authState.isLoggedIn) {
-                authPopup.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-                loginForm.classList.add('active');
-                signupForm.classList.remove('active');
-                return;
-            }
-            
-            const recipeId = btn.dataset.recipe;
-            const isCurrentlyFavorited = btn.classList.contains('active');
-            
-            try {
-                const method = isCurrentlyFavorited ? 'DELETE' : 'POST';
-                const response = await fetch(`${API_BASE_URL}/recipes/${recipeId}/save`, {
-                    method: method,
-                    credentials: 'include'
-                });
-                
-                if (response.ok) {
-                    if (isCurrentlyFavorited) {
-                        btn.classList.remove('active');
-                        btn.innerHTML = '<i class="far fa-heart"></i>';
-                        favorites = favorites.filter(id => id != recipeId);
-                    } else {
-                        btn.classList.add('active');
-                        btn.innerHTML = '<i class="fas fa-heart"></i>';
-                        favorites.push(recipeId.toString());
-                    }
-                    saveFavorites();
-                    showCustomAlert('Uspešno', 'Dodan u favorite');
-                }
-            } catch (error) {
-                console.error('Error toggling favorite:', error);
-            }
-        });
-    });
-    
-    // Update favorite button states
+function getMealTypeLabel(mealType) {
+    const labels = {
+        'dorucak': 'Doručak',
+        'rucak': 'Ručak',
+        'vecera': 'Večera',
+        'uzina': 'Užina'
+    };
+    return labels[mealType] || mealType || 'Ostalo';
+}
+
+function getDifficultyLabel(difficulty) {
+    const labels = {
+        'lako': 'Lako',
+        'srednje': 'Srednje',
+        'tesko': 'Teško'
+    };
+    return labels[difficulty] || difficulty || 'Srednje';
+}
+
+function getDietTypeLabel(recipe) {
+    if (recipe.is_vegan) return 'Vegansko';
+    if (recipe.is_vegetarian) return 'Vegetarijansko';
+    if (recipe.is_posno) return 'Posno';
+    if (recipe.is_halal) return 'Halal';
+    return 'Ostalo';
+}
+
+function updateFavoriteButtons() {
     document.querySelectorAll('.recipe-card .favorite-btn').forEach(btn => {
         const recipeId = btn.dataset.recipe;
         if (favorites.includes(recipeId.toString())) {
             btn.classList.add('active');
             btn.innerHTML = '<i class="fas fa-heart"></i>';
+        } else {
+            btn.classList.remove('active');
+            btn.innerHTML = '<i class="far fa-heart"></i>';
         }
+    });
+}
+
+// Attach listeners to recipe cards
+function attachRecipeCardListeners() {
+    // Attach click handlers to details buttons
+    document.querySelectorAll('.recipe-card .btn-recipe-details').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const card = btn.closest('.recipe-card');
+            const recipeId = card.dataset.recipe;
+            const cardImage = card.querySelector('img');
+            const cardImageSrc = cardImage ? cardImage.src : '';
+            const title = card.querySelector('h3')?.textContent || '';
+
+            // Show loading state
+            document.getElementById('popupImage').src = cardImageSrc;
+            document.getElementById('popupImage').alt = title;
+            document.getElementById('popupTitle').textContent = title;
+            document.getElementById('popupDescription').textContent = 'Učitavanje detalja...';
+            document.getElementById('ingredientsList').innerHTML = '<li>Učitavanje...</li>';
+            document.getElementById('instructionsList').innerHTML = '<li>Učitavanje...</li>';
+            document.getElementById('nutritionGrid').innerHTML = '';
+
+            recipePopup.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            fetch(`${API_BASE_URL}/recipes/${recipeId}`)
+                .then(response => response.json())
+                .then(recipe => {
+                    document.getElementById('popupDescription').textContent = recipe.description || 'Nema dostupnog opisa';
+
+                    if (recipe.ingredients && recipe.ingredients.length > 0) {
+                        document.getElementById('ingredientsList').innerHTML = recipe.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('');
+                    } else {
+                        document.getElementById('ingredientsList').innerHTML = '<li>Nema dostupnih sastojaka</li>';
+                    }
+
+                    if (recipe.instructions && recipe.instructions.length > 0) {
+                        document.getElementById('instructionsList').innerHTML = recipe.instructions.map(instruction => `<li>${instruction}</li>`).join('');
+                    } else {
+                        document.getElementById('instructionsList').innerHTML = '<li>Nema dostupnih uputstava</li>';
+                    }
+
+                    const popupStats = document.getElementById('popupStats');
+                    popupStats.innerHTML = `
+                        <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                            ${recipe.kcal !== null ? `<div>
+                                <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.kcal}</span>
+                                <span style="color: #666; margin-left: 5px;">kcal</span>
+                            </div>` : ''}
+                            ${recipe.protein !== null ? `<div>
+                                <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.protein}</span>
+                                <span style="color: #666; margin-left: 5px;">g proteina</span>
+                            </div>` : ''}
+                            ${recipe.fat !== null ? `<div>
+                                <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.fat}</span>
+                                <span style="color: #666; margin-left: 5px;">g masti</span>
+                            </div>` : ''}
+                        </div>
+                    `;
+
+                    let nutritionHTML = '';
+                    if (recipe.kcal !== null) nutritionHTML += `<div class="nutrition-item"><span class="label">Kalorije</span><span class="value">${recipe.kcal} kcal</span></div>`;
+                    if (recipe.protein !== null) nutritionHTML += `<div class="nutrition-item"><span class="label">Proteini</span><span class="value">${recipe.protein}g</span></div>`;
+                    if (recipe.fat !== null) nutritionHTML += `<div class="nutrition-item"><span class="label">Masti</span><span class="value">${recipe.fat}g</span></div>`;
+
+                    if (nutritionHTML) {
+                        document.getElementById('nutritionGrid').innerHTML = nutritionHTML;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching recipe details:', error);
+                    document.getElementById('popupDescription').textContent = 'Greška pri učitavanju detalja';
+                    document.getElementById('ingredientsList').innerHTML = '<li>Greška pri učitavanju</li>';
+                    document.getElementById('instructionsList').innerHTML = '<li>Greška pri učitavanju</li>';
+                });
+        });
+    });
+
+    // Attach favorite button listeners
+    document.querySelectorAll('.recipe-card .favorite-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.stopPropagation();
+
+            if (!authState.isLoggedIn) {
+                authPopup.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                loginForm.classList.add('active');
+                signupForm.classList.remove('active');
+                document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+                document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+                return;
+            }
+
+            const recipeId = parseInt(btn.dataset.recipe, 10);
+            const isCurrentlyFavorited = btn.classList.contains('active');
+
+            try {
+                const method = isCurrentlyFavorited ? 'DELETE' : 'POST';
+                const response = await fetch(`${API_BASE_URL}/saved-recipes`, {
+                    method: method,
+                    credentials: 'include',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ recipe_id: recipeId })
+                });
+
+                if (response.ok) {
+                    if (isCurrentlyFavorited) {
+                        btn.classList.remove('active');
+                        btn.innerHTML = '<i class="far fa-heart"></i>';
+                        favorites = favorites.filter(id => id !== recipeId.toString());
+                    } else {
+                        btn.classList.add('active');
+                        btn.innerHTML = '<i class="fas fa-heart"></i>';
+                        favorites.push(recipeId.toString());
+                    }
+                    showCustomAlert('Uspešno', 'Dodan u favorite');
+                } else {
+                    console.error('Failed to save favorite');
+                }
+            } catch (error) {
+                console.error('Error toggling favorite:', error);
+            }
+        });
     });
 }
 
@@ -571,7 +635,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Check authentication status and update UI
     await initializeAuth();
     
-    // Load favorites from backend if logged in, otherwise from localStorage
+    // Load favorites from backend
     await loadFavoritesFromBackend();
     
     // Load and display latest 3 recipes

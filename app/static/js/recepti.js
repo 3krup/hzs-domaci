@@ -149,6 +149,10 @@ function createDatabaseRecipeCard(recipe) {
                     <span class="value">${recipe.fat}g</span>
                     <span class="label">masti</span>
                 </div>
+                ${recipe.prep_time_minutes ? `<div class="stat">
+                    <span class="value">${recipe.prep_time_minutes}</span>
+                    <span class="label">min</span>
+                </div>` : ''}
             </div>
             <p class="difficulty"><i class="fas fa-signal"></i> Slozenost: ${difficultyLabel}</p>
             <button class="btn-recipe-details">Detaljnije</button>
@@ -449,7 +453,7 @@ function handleFavoriteClick(e) {
         return;
     }
     
-    const recipeId = this.dataset.recipe;
+    const recipeId = parseInt(this.dataset.recipe, 10);
     const isCurrentlyFavorite = favorites.includes(recipeId.toString());
     
     // Save to backend using /saved-recipes endpoint
@@ -578,19 +582,14 @@ function handleDetailsClick(e) {
                         <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.fat}</span>
                         <span style="color: #666; margin-left: 5px;">g masti</span>
                     </div>` : ''}
-                    ${recipe.carbs !== null ? `<div>
-                        <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.carbs}</span>
-                        <span style="color: #666; margin-left: 5px;">g ugljenih</span>
-                    </div>` : ''}
                 </div>
             `;
             
             // Build nutrition grid
             let nutritionHTML = '';
-            if (recipe.kcal !== null) nutritionHTML += `<div><strong>Kalorije:</strong> ${recipe.kcal} kcal</div>`;
-            if (recipe.protein !== null) nutritionHTML += `<div><strong>Proteini:</strong> ${recipe.protein}g</div>`;
-            if (recipe.fat !== null) nutritionHTML += `<div><strong>Masti:</strong> ${recipe.fat}g</div>`;
-            if (recipe.carbs !== null) nutritionHTML += `<div><strong>Ugljenohdrati:</strong> ${recipe.carbs}g</div>`;
+            if (recipe.kcal !== null) nutritionHTML += `<div class="nutrition-item"><span class="label">Kalorije</span><span class="value">${recipe.kcal} kcal</span></div>`;
+            if (recipe.protein !== null) nutritionHTML += `<div class="nutrition-item"><span class="label">Proteini</span><span class="value">${recipe.protein}g</span></div>`;
+            if (recipe.fat !== null) nutritionHTML += `<div class="nutrition-item"><span class="label">Masti</span><span class="value">${recipe.fat}g</span></div>`;
             
             if (nutritionHTML) {
                 document.getElementById('nutritionGrid').innerHTML = nutritionHTML;
