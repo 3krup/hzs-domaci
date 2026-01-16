@@ -437,5 +437,65 @@ def get_all_ingredients():
     finally:
         conn.close()
 
+@app.route('/saved-recipes', methods=['GET'])
+@token_required
+def get_saved_recipes(current_user_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'message': 'Database connection failed'}), 500
+    cursor = conn.cursor(dictionary=True)
+
+    sql = """
+          SELECT r.*, r.is_vegetarian, r.is_vegan, r.is_posno, r.is_halal
+          FROM recipes r
+                   JOIN saved_recipes sr ON r.id = sr.recipe_id
+          WHERE sr.user_id = %s
+          ORDER BY sr.saved_at DESC
+          """
+
+    try:
+        cursor.execute(sql, (current_user_id,))
+        recipes = cursor.fetchall()
+
+        for recipe in recipes:
+            if recipe['image_url']:
+                recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
+
+        return jsonify(recipes)
+    except MySQLError as e:
+        return jsonify({'message': f'Database error: {e}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/my-created-recipes', methods=['GET'])
+@token_required
+def get_created_recipes(current_user_id):
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'message': 'Database connection failed'}), 500
+    cursor = conn.cursor(dictionary=True)
+
+    sql = """
+          SELECT r.*, r.is_vegetarian, r.is_vegan, r.is_posno, r.is_halal
+          FROM recipes r
+          WHERE r.user_id = %s
+          ORDER BY r.created_at DESC
+          """
+
+    try:
+        cursor.execute(sql, (current_user_id,))
+        recipes = cursor.fetchall()
+
+        for recipe in recipes:
+            if recipe['image_url']:
+                recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
+
+        return jsonify(recipes)
+    except MySQLError as e:
+        return jsonify({'message': f'Database error: {e}'}), 500
+    finally:
+        conn.close()
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=config.DEBUG)
