@@ -179,7 +179,11 @@ recipeCards.forEach(card => {
             const recipe = recipes[recipeId];
             
             if (recipe) {
-                document.getElementById('popupImage').src = recipe.image;
+                let imageSrc = recipe.image;
+                if (!imageSrc.startsWith('http') && !imageSrc.startsWith('/') && !imageSrc.startsWith('../')) {
+                    imageSrc = '../' + imageSrc;
+                }
+                document.getElementById('popupImage').src = imageSrc;
                 document.getElementById('popupImage').alt = recipe.title;
                 document.getElementById('popupTitle').textContent = recipe.title;
                 

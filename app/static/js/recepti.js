@@ -639,27 +639,39 @@ recipeCards.forEach(card => {
     card.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-recipe-details')) {
             const recipeId = card.dataset.recipe;
+            
+            // Get recipe from hardcoded recipes object
             const recipe = recipes[recipeId];
             
             if (recipe) {
-                document.getElementById('popupImage').src = recipe.image;
+                // Handle image path - add ../ prefix for hardcoded recipes
+                let imageSrc = recipe.image;
+                if (!imageSrc.startsWith('http') && !imageSrc.startsWith('/') && !imageSrc.startsWith('../')) {
+                    imageSrc = '../' + imageSrc;
+                }
+                
+                document.getElementById('popupImage').src = imageSrc;
                 document.getElementById('popupImage').alt = recipe.title;
                 document.getElementById('popupTitle').textContent = recipe.title;
                 
                 // Set stats
                 const popupStats = document.getElementById('popupStats');
+                const kcal = recipe.nutrition['Kcal'] || recipe.calories;
+                const protein = recipe.nutrition['Protein'] || recipe.protein;
+                const fats = recipe.nutrition['Masti'] || recipe.fats;
+                
                 popupStats.innerHTML = `
                     <div style="display: flex; gap: 20px;">
                         <div>
-                            <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.calories}</span>
+                            <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${kcal}</span>
                             <span style="color: #666; margin-left: 5px;">kcal</span>
                         </div>
                         <div>
-                            <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.protein}</span>
+                            <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${protein}</span>
                             <span style="color: #666; margin-left: 5px;">protein</span>
                         </div>
                         <div>
-                            <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.fats}</span>
+                            <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${fats}</span>
                             <span style="color: #666; margin-left: 5px;">masti</span>
                         </div>
                     </div>
