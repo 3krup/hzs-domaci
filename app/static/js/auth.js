@@ -1,5 +1,5 @@
 // Shared Authentication Module
-const API_BASE_URL = 'http://146.190.22.228:5000';
+const API_BASE_URL = window.location.origin;
 
 // Custom Alert Popup
 function showCustomAlert(message, title = 'Obaveštenje') {
