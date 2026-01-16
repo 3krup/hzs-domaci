@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FitPlate - Zdravi recepti</title>
-    <link rel="stylesheet" href="index.css">
+    <title>Recepti - FitPlate</title>
+    <link rel="stylesheet" href="../static/css/recepti.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,15 +14,15 @@
     <!-- Navbar -->
     <nav class="navbar">
         <div class="container nav-container">
-            <a href="#" class="logo">
-                <img src="static/images/logo 5.png" alt="FitPlate Logo" id="main-logo">
+            <a href="index.html" class="logo">
+                <img src="../static/images/logo 5.png" alt="FitPlate Logo" id="main-logo">
                 <span>FitPlate</span>
             </a>
             
             <!-- Desktop Navigation -->
             <ul class="nav-menu">
-                <li><a href="#" class="active">Pocetna</a></li>
-                <li><a href="recepti.html">Recepti</a></li>
+                <li><a href="index.html">Pocetna</a></li>
+                <li><a href="recepti.html" class="active">Recepti</a></li>
                 <li><a href="kreiranje.html">Kreiraj Sam</a></li>
                 <li><button class="btn-prijava" id="prijaviSeBtn">Prijavi Se</button></li>
             </ul>
@@ -36,75 +36,69 @@
         <!-- Mobile Navigation -->
         <div class="mobile-menu" id="mobileMenu">
             <ul>
-                <li><a href="#" class="active">Pocetna</a></li>
-                <li><a href="recepti.html">Recepti</a></li>
+                <li><a href="index.html">Pocetna</a></li>
+                <li><a href="recepti.html" class="active">Recepti</a></li>
                 <li><a href="kreiranje.html">Kreiraj Sam</a></li>
                 <li><button class="btn-prijava" id="prijaviSeMobileBtn">Prijavi Se</button></li>
             </ul>
         </div>
     </nav>
 
-    <!-- Hero Section -->
-    <section class="hero" style="background-image: url('static/images/pozadina.jpg');">
-        <div class="container hero-container">
-            <div class="hero-content">
-                <h1>Jedite pametno. Živite zdravije.</h1>
-                <p>Inspiracija za zdrave obroke i alati koji ti pomažu da iskoristiš ono što već imaš.</p>
-                <div class="hero-buttons">
-                    <a href="#recepti" class="btn-primary">Recepti</a>
-                    <a href="#kreiraj" class="btn-secondary">Kreiraj Sam</a>
+    <!-- Search Section -->
+    <section class="search-section">
+        <div class="container">
+            <h1>Izaberi zdrav obrok koji odgovara tebi</h1>
+            
+            <div class="search-wrapper">
+                <div class="search-bar">
+                    <input type="text" id="searchInput" placeholder="Pretraži recept po nazivu...">
+                    <button class="search-btn"><i class="fas fa-search"></i></button>
                 </div>
+            </div>
+            
+            <div class="filters">
+                <div class="filter-group">
+                    <label>Tip obroka</label>
+                    <select id="tipObrokaFilter" class="filter-dropdown">
+                        <option value="">Sve</option>
+                        <option value="dorucak">Dorucak</option>
+                        <option value="rucak">Rucak</option>
+                        <option value="vecera">Vecera</option>
+                        <option value="uzina">Uzina</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Tip ishrane</label>
+                    <select id="tipIshrane Filter" class="filter-dropdown">
+                        <option value="">Sve</option>
+                        <option value="sa-mesom">Sa mesom</option>
+                        <option value="posno">Posno</option>
+                        <option value="vegetarijansko">Vegetarijansko</option>
+                        <option value="vegansko">Vegansko</option>
+                        <option value="halal">Halal</option>
+                    </select>
+                </div>
+                
+                <div class="filter-group">
+                    <label>Max Kalorija</label>
+                    <input type="number" id="maxCaloriesInput" placeholder="Unesite broj..." class="calories-input">
+                </div>
+                
+                <button class="clear-filters-btn" id="clearFiltersBtn">Ukloni Filtere</button>
             </div>
         </div>
     </section>
 
-    <!-- Journey Section -->
-    <section class="journey">
+    <!-- Recommended Recipes -->
+    <section class="recommended-recipes">
         <div class="container">
-            <h2 class="section-title">Tvoj Put Do Zdravog Obroka</h2>
-            <div class="journey-steps">
-                <div class="step">
-                    <div class="step-icon">
-                        <img src="static/images/restaurant.png" alt="Pronađi inspiraciju">
-                    </div>
-                    <div class="arrow">
-                        <img src="static/images/Ellipse 79.png" alt="Strelica">
-                    </div>
-                    <h3>Pronađi Inspiraciju</h3>
-                    <p>Istraži kolekciju zdravih recepata ili koristi svoje namirnice.</p>
-                </div>
-                
-                <div class="step">
-                    <div class="step-icon">
-                        <img src="static/images/person.png" alt="Prilagodi sebi">
-                    </div>
-                    <div class="arrow">
-                        <img src="static/images/Ellipse 81.png" alt="Strelica">
-                    </div>
-                    <h3>Prilagodi Sebi</h3>
-                    <p>Izmeni postojeći ili kreiraj potpuno novi recept.</p>
-                </div>
-                
-                <div class="step">
-                    <div class="step-icon">
-                        <img src="static/images/bookmark.png" alt="Čuvaj favorite">
-                    </div>
-                    <h3>Čuvaj Svoje Favorite</h3>
-                    <p>Vrati se receptima kad god ti zatrebaju.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- Popular Recipes -->
-    <section class="popular-recipes" id="recepti">
-        <div class="container">
-            <h2 class="section-title">Popularni Recepti</h2>
+            <h2 class="section-title">Preporuceno za Vas</h2>
             <div class="recipes-grid">
                 <!-- Recipe 1 -->
                 <div class="recipe-card" data-recipe="avokado">
                     <div class="recipe-image">
-                        <img src="static/images/avkoado.jpg" alt="Avokado Omlet">
+                        <img src="../static/images/avkoado.jpg" alt="Avokado Omlet">
                         <button class="favorite-btn" data-recipe="avokado">
                             <i class="far fa-heart"></i>
                         </button>
@@ -138,7 +132,7 @@
                 <!-- Recipe 2 -->
                 <div class="recipe-card" data-recipe="piletina">
                     <div class="recipe-image">
-                        <img src="static/images/piletina.jpg" alt="Sesam Piletina">
+                        <img src="../static/images/piletina.jpg" alt="Sesam Piletina">
                         <button class="favorite-btn" data-recipe="piletina">
                             <i class="far fa-heart"></i>
                         </button>
@@ -172,7 +166,7 @@
                 <!-- Recipe 3 -->
                 <div class="recipe-card" data-recipe="brownie">
                     <div class="recipe-image">
-                        <img src="static/images/brownie.webp" alt="Protein Brownie">
+                        <img src="../static/images/brownie.webp" alt="Protein Brownie">
                         <button class="favorite-btn" data-recipe="brownie">
                             <i class="far fa-heart"></i>
                         </button>
@@ -203,6 +197,10 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="more-recipes-message">
+                <p>Jos recepata stize uskoro</p>
+            </div>
         </div>
     </section>
 
@@ -211,7 +209,7 @@
         <div class="container">
             <div class="footer-content">
                 <div class="footer-logo">
-                    <img src="static/images/logo 5.png" alt="FitPlate Logo">
+                    <img src="../static/images/logo 5.png" alt="FitPlate Logo">
                 </div>
                 
                 <div class="footer-info">
@@ -264,7 +262,7 @@
         </div>
     </div>
 
-    <!-- Login/Signup Popup (Basic Structure) -->
+    <!-- Login/Signup Popup -->
     <div class="auth-popup" id="authPopup">
         <div class="auth-content">
             <button class="close-auth" id="closeAuth">
@@ -315,6 +313,6 @@
         </div>
     </div>
 
-    <script src="index.js"></script>
+    <script src="../static/js/recepti.js"></script>
 </body>
 </html>
