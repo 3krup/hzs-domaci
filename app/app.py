@@ -170,7 +170,6 @@ def add_recipe(current_user_id):
         difficulty = request.form.get('difficulty', 'Srednje')
 
         meal_type = request.form.get('meal_type')
-        prep_time_minutes = request.form.get('prep_time_minutes', 0)
 
         kcal = request.form.get('kcal', 0)
         protein = request.form.get('protein', 0)
@@ -182,23 +181,16 @@ def add_recipe(current_user_id):
         is_vegetarian = 1 if request.form.get('is_vegetarian') == '1' else 0
         is_vegan = 1 if request.form.get('is_vegan') == '1' else 0
 
-        diet_type = request.form.get('diet_type', '')
-        if not any([is_posno, is_halal, is_vegetarian, is_vegan]) and diet_type:
-            if diet_type == 'posno':
-                is_posno = 1
-            elif diet_type == 'halal':
-                is_halal = 1
-
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
             sql = """
                   INSERT INTO recipes
-                  (user_id, title, description, preparation_steps, prep_time_minutes, difficulty, kcal, protein, fat, image_url, is_posno, is_halal, is_vegetarian, is_vegan, meal_type)
-                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                  (user_id, title, description, preparation_steps, difficulty, kcal, protein, fat, image_url, is_posno, is_halal, is_vegetarian, is_vegan, meal_type)
+                  VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                   """
             cursor.execute(sql, (
-                current_user_id, title, description, steps, prep_time_minutes, difficulty, kcal, protein, fat, unique_filename, is_posno, is_halal, is_vegetarian, is_vegan, meal_type
+                current_user_id, title, description, steps, difficulty, kcal, protein, fat, unique_filename, is_posno, is_halal, is_vegetarian, is_vegan, meal_type
             ))
             new_recipe_id = cursor.lastrowid
 
@@ -236,68 +228,6 @@ def get_all_recipes():
             recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
     return jsonify(recipes)
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
-@app.route('/recipes/latest', methods=['GET'])
-def get_latest_recipes():
-    limit = request.args.get('limit', 3, type=int)
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    cursor.execute(f"SELECT * FROM recipes ORDER BY created_at DESC LIMIT {limit}")
-    recipes = cursor.fetchall()
-    conn.close()
-    for recipe in recipes:
-        if recipe['image_url']:
-            recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
-    return jsonify(recipes)
-
-@app.route('/recipes/<int:recipe_id>', methods=['GET'])
-def get_recipe(recipe_id):
-    conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    
-    # Fetch recipe details
-    cursor.execute("""
-        SELECT id, title, description, preparation_steps, prep_time_minutes, difficulty,
-               kcal, protein, fat, image_url, is_posno, is_halal, is_vegetarian, is_vegan, meal_type
-        FROM recipes WHERE id = %s
-    """, (recipe_id,))
-    recipe = cursor.fetchone()
-    
-    if not recipe:
-        conn.close()
-        return jsonify({'message': 'Recept ne postoji'}), 404
-    
-    # Fetch ingredients for this recipe
-    cursor.execute("""
-        SELECT i.name, ri.quantity
-        FROM recipe_ingredients ri
-        JOIN ingredients i ON ri.ingredient_id = i.id
-        WHERE ri.recipe_id = %s
-    """, (recipe_id,))
-    ingredients = cursor.fetchall()
-    recipe['ingredients'] = [f"{ing['quantity']} {ing['name']}" if ing['quantity'] else ing['name'] for ing in ingredients]
-    
-    # Parse preparation steps as instructions (they're stored as text)
-    if recipe['preparation_steps']:
-        # Split by newlines or numbers like "1.", "2.", etc.
-        steps = recipe['preparation_steps'].split('\n')
-        recipe['instructions'] = [step.strip() for step in steps if step.strip()]
-    else:
-        recipe['instructions'] = []
-    
-    # Format image URL
-    if recipe['image_url']:
-        recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
-    
-    conn.close()
-    return jsonify(recipe)
-
-
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
 @app.route('/recipes/<int:recipe_id>', methods=['DELETE'])
 @token_required
 def delete_recipe(current_user_id, recipe_id):
@@ -363,6 +293,8 @@ def search_recipes():
     difficulty = request.args.get('difficulty')
     is_posno = request.args.get('posno')
     is_halal = request.args.get('halal')
+    is_vegetarian = request.args.get('vegetarian')
+    is_vegan = request.args.get('vegan')
     max_time = request.args.get('max_time')
 
     meal_type = request.args.get('meal_type')
@@ -393,6 +325,12 @@ def search_recipes():
 
     if is_halal == '1' or is_halal == 'true':
         conditions.append("r.is_halal = 1")
+
+    if is_vegetarian == '1' or is_vegetarian == 'true':
+        conditions.append("r.is_vegetarian = 1")
+
+    if is_vegan == '1' or is_vegan == 'true':
+        conditions.append("r.is_vegan = 1")
 
     if max_time:
         conditions.append("r.prep_time_minutes <= %s")
@@ -465,56 +403,6 @@ def get_saved_recipes(current_user_id):
         return jsonify(recipes)
     except MySQLError as e:
         return jsonify({'message': f'Database error: {e}'}), 500
-    finally:
-        conn.close()
-
-@app.route('/saved-recipes', methods=['POST'])
-@token_required
-def save_recipe_by_body(current_user_id):
-    data = request.get_json(silent=True) or {}
-    recipe_id = data.get('recipe_id')
-    if not recipe_id:
-        return jsonify({'message': 'recipe_id je obavezan'}), 400
-
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'message': 'Database connection failed'}), 500
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "INSERT INTO saved_recipes (user_id, recipe_id) VALUES (%s, %s)",
-            (current_user_id, recipe_id)
-        )
-        conn.commit()
-        return jsonify({'message': 'Recept sačuvan!'}), 201
-    except mysql.connector.IntegrityError:
-        return jsonify({'message': 'Već sačuvan'}), 409
-    except Exception as e:
-        return jsonify({'message': str(e)}), 500
-    finally:
-        conn.close()
-
-@app.route('/saved-recipes', methods=['DELETE'])
-@token_required
-def unsave_recipe_by_body(current_user_id):
-    data = request.get_json(silent=True) or {}
-    recipe_id = data.get('recipe_id')
-    if not recipe_id:
-        return jsonify({'message': 'recipe_id je obavezan'}), 400
-
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'message': 'Database connection failed'}), 500
-    cursor = conn.cursor()
-    try:
-        cursor.execute(
-            "DELETE FROM saved_recipes WHERE user_id = %s AND recipe_id = %s",
-            (current_user_id, recipe_id)
-        )
-        conn.commit()
-        return jsonify({'message': 'Uklonjen iz sačuvanih'}), 200
-    except Exception as e:
-        return jsonify({'message': str(e)}), 500
     finally:
         conn.close()
 
