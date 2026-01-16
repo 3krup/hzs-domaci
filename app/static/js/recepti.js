@@ -1,100 +1,4 @@
-// Recipe Data - Same as index page
-const recipes = {
-    avokado: {
-        title: "Avokado Omlet",
-        image: "static/images/avkoado.jpg",
-        calories: 504,
-        protein: "27g",
-        fats: "37g",
-        ingredients: [
-            "3 jaja",
-            "1/2 zrelog avokada",
-            "1 kašika maslinovog ulja",
-            "Sol i biber po ukusu",
-            "50g špinata",
-            "1 mala crvena luka",
-            "30g feta sira"
-        ],
-        instructions: [
-            "Umutite jaja sa solju i biberom.",
-            "Na tavi zagrejte maslinovo ulje i dodajte sitno seckani crveni luk.",
-            "Kada luk omekša, dodajte špinat i pirjajte 2 minuta.",
-            "Prelijte umućena jaja i kuvajte na srednjoj vatri.",
-            "Kada omlet počne da se stvrdne, dodajte isečen avokado i feta sir.",
-            "Preklopite omlet i kuvajte još 2-3 minute.",
-            "Servirajte toplo."
-        ],
-        nutrition: {
-            "Kcal": 504,
-            "Protein": "27g",
-            "Masti": "37g"
-        }
-    },
-    piletina: {
-        title: "Sesam Piletina",
-        image: "static/images/piletina.jpg",
-        calories: 333,
-        protein: "36.8g",
-        fats: "15.2g",
-        ingredients: [
-            "2 pileća filea (oko 250g)",
-            "2 kašike susama",
-            "1 kašika meda",
-            "2 kašike soja sosa",
-            "1 kašika belog sirćeta",
-            "1 čen belog luka",
-            "1 kašika đumbira (narendanog)",
-            "1 kašika ulja"
-        ],
-        instructions: [
-            "Pileće filee isecite na trake.",
-            "U posudi pomešajte med, soja sos, sirće, seckani beli luk i đumbir.",
-            "Pileće trake umočite u marinadu i ostavite 15 minuta.",
-            "Na tavi zagrejte ulje i dodajte pileće trake.",
-            "Pržite 6-8 minuta dok ne porumene.",
-            "Pospite susamom i još 1 minut pržite.",
-            "Servirajte sa svežim povrćem."
-        ],
-        nutrition: {
-            "Kcal": 333,
-            "Protein": "36.8g",
-            "Masti": "15.2g"
-        }
-    },
-    brownie: {
-        title: "Protein Brownie",
-        image: "static/images/brownie.webp",
-        calories: 302,
-        protein: "23g",
-        fats: "17g",
-        ingredients: [
-            "60g proteinskog praha (čokolada)",
-            "30g kakaa",
-            "30g brašna od badema",
-            "1 jaje",
-            "100g jogurta",
-            "1 kašika meda",
-            "1/2 kašičice sode bikarbone",
-            "50g tamne čokolade (komadići)"
-        ],
-        instructions: [
-            "Zagrejte rernu na 180°C.",
-            "U posudi pomešajte suve sastojke: proteinski prah, kakao, brašno od badema, sodu bikarbonu.",
-            "Dodajte jaje, jogurt i med, dobro izmešajte.",
-            "Ubacite komadiće čokolade.",
-            "Prelijte smesu u podmazan kalup (15x15cm).",
-            "Pecite 20-25 minuta.",
-            "Ostavite da se ohladi pre sečenja."
-        ],
-        nutrition: {
-            "Kcal": 302,
-            "Protein": "23g",
-            "Masti": "17g"
-        }
-    }
-};
-
-// State Management - Backend ready
+// State Management - Database only (no hardcoded recipes)
 let activeFilters = {
     'tip-obroka': '',
     'tip-ishrane': '',
@@ -127,52 +31,6 @@ const maxMinutasInput = document.getElementById('maxMinutasInput');
 const searchBtn = document.querySelector('.search-btn');
 const favoritesFilterBtn = document.getElementById('favoritesFilterBtn');
 const favoriteButtons = document.querySelectorAll('.favorite-btn');
-
-// Hardcoded recipes for merging with database
-const hardcodedRecipes = {
-    avokado: {
-        id: 'avokado',
-        title: "Avokado Omlet",
-        image_url: "static/images/avkoado.jpg",
-        kcal: 504,
-        protein: 27,
-        fat: 37,
-        meal_type: 'dorucak',
-        difficulty: 'Lako',
-        prep_time_minutes: 15,
-        is_posno: 0,
-        is_halal: 0,
-        description: "Omlet sa avokadom"
-    },
-    piletina: {
-        id: 'piletina',
-        title: "Sesam Piletina",
-        image_url: "static/images/piletina.jpg",
-        kcal: 333,
-        protein: 36.8,
-        fat: 15.2,
-        meal_type: 'rucak',
-        difficulty: 'Srednje',
-        prep_time_minutes: 20,
-        is_posno: 0,
-        is_halal: 1,
-        description: "Piletina sa susamom"
-    },
-    brownie: {
-        id: 'brownie',
-        title: "Protein Brownie",
-        image_url: "static/images/brownie.webp",
-        kcal: 302,
-        protein: 23,
-        fat: 17,
-        meal_type: 'uzina',
-        difficulty: 'Lako',
-        prep_time_minutes: 30,
-        is_posno: 1,
-        is_halal: 0,
-        description: "Čokoladni brownie sa proteinom"
-    }
-};
 
 // Fetch and display all recipes from database
 async function fetchAllRecipes() {
@@ -223,9 +81,21 @@ function createDatabaseRecipeCard(recipe) {
     const card = document.createElement('div');
     card.className = 'recipe-card';
     card.dataset.recipe = recipe.id;
+    
+    // Determine image source
+    let imageSrc = '';
+    if (recipe.image_url && recipe.image_url.startsWith('http')) {
+        imageSrc = recipe.image_url;
+    } else if (recipe.image_url) {
+        imageSrc = API_BASE_URL + '/uploads/' + recipe.image_url;
+    } else if (recipe.image) {
+        // Hardcoded recipe - add ../ prefix for relative path
+        imageSrc = '../' + recipe.image;
+    }
+    
     card.innerHTML = `
         <div class="recipe-image">
-            <img src="${recipe.image_url && recipe.image_url.startsWith('http') ? recipe.image_url : API_BASE_URL + '/uploads/' + recipe.image_url}" alt="${recipe.title}">
+            <img src="${imageSrc}" alt="${recipe.title}">
             <button class="favorite-btn" data-recipe="${recipe.id}">
                 <i class="far fa-heart"></i>
             </button>
@@ -430,7 +300,7 @@ maxMinutasInput.addEventListener('input', (e) => {
 async function applyFilters() {
     console.log('Applying filters:', activeFilters);
     
-    let recipes = [];
+    let recipesList = [];
     
     // If showing favorites only
     if (activeFilters['showFavoritesOnly']) {
@@ -441,8 +311,10 @@ async function applyFilters() {
             });
             
             if (response.ok) {
-                recipes = await response.json();
-                console.log('Fetched favorites:', recipes);
+                let dbRecipes = await response.json();
+                console.log('Fetched favorites:', dbRecipes);
+                // Don't merge hardcoded with favorites - only show user's saved recipes
+                recipesList = dbRecipes;
             }
         } catch (error) {
             console.error('Error fetching favorites:', error);
@@ -479,39 +351,24 @@ async function applyFilters() {
             });
             
             if (response.ok) {
-                recipes = await response.json();
-                console.log('Fetched recipes:', recipes);
-                
-                // Merge hardcoded recipes with database recipes
-                recipes = mergeWithHardcodedRecipes(recipes);
-                
-                // Filter hardcoded recipes based on active filters
-                recipes = filterRecipes(recipes);
+                let dbRecipes = await response.json();
+                console.log('Fetched recipes from database:', dbRecipes);
+                recipesList = dbRecipes;
+            } else {
+                // If fetch fails, start with empty list
+                recipesList = [];
             }
         } catch (error) {
             console.error('Error applying filters:', error);
+            recipesList = [];
         }
+        
+        // Apply filters to all recipes (database only, no hardcoded)
+        recipesList = filterRecipes(recipesList);
     }
     
     // Display filtered recipes
-    displayRecipes(recipes);
-}
-
-function mergeWithHardcodedRecipes(databaseRecipes) {
-    // Create a set of database recipe IDs to avoid duplicates
-    const dbIds = new Set(databaseRecipes.map(r => r.id));
-    
-    // Add hardcoded recipes that aren't in database
-    const hardcodedArray = Object.values(hardcodedRecipes);
-    const merged = [...databaseRecipes];
-    
-    hardcodedArray.forEach(recipe => {
-        if (!dbIds.has(recipe.id)) {
-            merged.push(recipe);
-        }
-    });
-    
-    return merged;
+    displayRecipes(recipesList);
 }
 
 function filterRecipes(recipes) {
@@ -592,9 +449,9 @@ function handleFavoriteClick(e) {
     }
     
     const recipeId = this.dataset.recipe;
-    const isCurrentlyFavorite = favorites.includes(recipeId);
+    const isCurrentlyFavorite = favorites.includes(recipeId.toString());
     
-    // Save to backend
+    // All recipes are from database - save to backend
     const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
     
     fetch(`${API_BASE_URL}/recipes/${recipeId}/save`, {
@@ -605,19 +462,22 @@ function handleFavoriteClick(e) {
         if (response.ok) {
             // Update local favorites
             if (isCurrentlyFavorite) {
-                favorites = favorites.filter(id => id !== recipeId);
+                favorites = favorites.filter(id => id !== recipeId.toString());
             } else {
-                favorites.push(recipeId);
+                favorites.push(recipeId.toString());
             }
             
             saveFavorites();
             updateFavoriteButtons();
-            console.log('Favorite toggled for:', recipeId, 'Favorites:', favorites);
+            showCustomAlert('Uspešno', 'Dodan u favorite');
+            console.log('Recipe favorite toggled for:', recipeId, 'Favorites:', favorites);
         } else {
+            showCustomAlert('Greška pri dodavanju u favorite', 'Greška');
             console.error('Failed to save favorite');
         }
     })
     .catch(error => {
+        showCustomAlert('Greška pri dodavanju u favorite', 'Greška');
         console.error('Error saving favorite:', error);
     });
 }
@@ -636,107 +496,43 @@ function handleDetailsClick(e) {
     const card = this.closest('.recipe-card');
     const recipeId = card.dataset.recipe;
     
-    // Get image from the card directly (already has correct path)
+    // Get image from the card directly
     const cardImage = card.querySelector('img');
     const cardImageSrc = cardImage ? cardImage.src : '';
     
-    // First check if it's a hardcoded recipe
-    let recipe = recipes[recipeId];
+    // All recipes are from database now
+    const title = card.querySelector('h3').textContent;
+    const stats = card.querySelectorAll('.stat');
     
-    if (recipe) {
-        // Handle hardcoded recipe
-        document.getElementById('popupImage').src = cardImageSrc || recipe.image;
-        document.getElementById('popupImage').alt = recipe.title;
-        document.getElementById('popupTitle').textContent = recipe.title;
-        
-        // Set stats
-        const popupStats = document.getElementById('popupStats');
-        const kcal = recipe.nutrition['Kcal'] || recipe.calories;
-        const protein = recipe.nutrition['Protein'] || recipe.protein;
-        const fats = recipe.nutrition['Masti'] || recipe.fats;
-        
-        popupStats.innerHTML = `
-            <div style="display: flex; gap: 20px;">
-                <div>
-                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${kcal}</span>
-                    <span style="color: #666; margin-left: 5px;">kcal</span>
-                </div>
-                <div>
-                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${protein}</span>
-                    <span style="color: #666; margin-left: 5px;">protein</span>
-                </div>
-                <div>
-                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${fats}</span>
-                    <span style="color: #666; margin-left: 5px;">masti</span>
-                </div>
+    document.getElementById('popupImage').src = cardImageSrc;
+    document.getElementById('popupImage').alt = title;
+    document.getElementById('popupTitle').textContent = title;
+    document.getElementById('popupDescription').textContent = 'Detalji recepta';
+    
+    // Set stats from card
+    const popupStats = document.getElementById('popupStats');
+    const statsText = Array.from(stats).map(s => s.textContent);
+    
+    popupStats.innerHTML = `
+        <div style="display: flex; gap: 20px;">
+            <div>
+                <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${statsText[0]?.split(' ')[0] || 'N/A'}</span>
+                <span style="color: #666; margin-left: 5px;">kcal</span>
             </div>
-        `;
-        
-        // Set ingredients
-        const ingredientsList = document.getElementById('ingredientsList');
-        ingredientsList.innerHTML = recipe.ingredients
-            .map(ingredient => `<li>${ingredient}</li>`)
-            .join('');
-        
-        // Set instructions
-        const instructionsList = document.getElementById('instructionsList');
-        instructionsList.innerHTML = recipe.instructions
-            .map((step, index) => `<li>${step}</li>`)
-            .join('');
-        
-        // Set nutrition
-        const nutritionGrid = document.getElementById('nutritionGrid');
-        nutritionGrid.innerHTML = Object.entries(recipe.nutrition)
-            .map(([key, value]) => `
-                <div class="nutrition-item">
-                    <span class="label">${key}</span>
-                    <span class="value">${value}</span>
-                </div>
-            `)
-            .join('');
-        
-        recipePopup.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    } else {
-        // For database recipes, show basic info
-        const title = card.querySelector('h3').textContent;
-        const stats = card.querySelectorAll('.stat');
-        
-        document.getElementById('popupImage').src = cardImageSrc;
-        document.getElementById('popupImage').alt = title;
-        document.getElementById('popupTitle').textContent = title;
-        
-        // Set stats from card
-        const popupStats = document.getElementById('popupStats');
-        const kcal = stats[0]?.querySelector('.value').textContent;
-        const protein = stats[1]?.querySelector('.value').textContent;
-        const fats = stats[2]?.querySelector('.value').textContent;
-        
-        popupStats.innerHTML = `
-            <div style="display: flex; gap: 20px;">
-                <div>
-                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${kcal}</span>
-                    <span style="color: #666; margin-left: 5px;">kcal</span>
-                </div>
-                <div>
-                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${protein}</span>
-                    <span style="color: #666; margin-left: 5px;">protein</span>
-                </div>
-                <div>
-                    <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${fats}</span>
-                    <span style="color: #666; margin-left: 5px;">masti</span>
-                </div>
+            <div>
+                <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${statsText[1]?.split('g')[0] || 'N/A'}g</span>
+                <span style="color: #666; margin-left: 5px;">protein</span>
             </div>
-        `;
-        
-        // Clear ingredients/instructions for database recipes (not available)
-        document.getElementById('ingredientsList').innerHTML = '<li>Detalji recepta nisu dostupni</li>';
-        document.getElementById('instructionsList').innerHTML = '<li>Detalji recepta nisu dostupni</li>';
-        document.getElementById('nutritionGrid').innerHTML = '';
-        
-        recipePopup.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
+        </div>
+    `;
+    
+    // Clear ingredients/instructions (not available in database schema)
+    document.getElementById('ingredientsList').innerHTML = '<li>Detalji recepta nisu dostupni</li>';
+    document.getElementById('instructionsList').innerHTML = '<li>Detalji recepta nisu dostupni</li>';
+    document.getElementById('nutritionGrid').innerHTML = '';
+    
+    recipePopup.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
 
 

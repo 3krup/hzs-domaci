@@ -234,6 +234,19 @@ def get_all_recipes():
             recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
     return jsonify(recipes)
 
+@app.route('/recipes/latest', methods=['GET'])
+def get_latest_recipes():
+    limit = request.args.get('limit', 3, type=int)
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute(f"SELECT * FROM recipes ORDER BY created_at DESC LIMIT {limit}")
+    recipes = cursor.fetchall()
+    conn.close()
+    for recipe in recipes:
+        if recipe['image_url']:
+            recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
+    return jsonify(recipes)
+
 @app.route('/recipes/<int:recipe_id>', methods=['DELETE'])
 @token_required
 def delete_recipe(current_user_id, recipe_id):
