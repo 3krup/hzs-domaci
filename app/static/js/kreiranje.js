@@ -27,10 +27,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Check if user is logged in before allowing access
-// Fetch and display user's recipes
+// Fetch and display user's created recipes
 async function fetchAndDisplayUserRecipes() {
     try {
-        const response = await fetch(`${API_BASE_URL}/my-recipes`, {
+        const response = await fetch(`${API_BASE_URL}/my-created-recipes`, {
             method: 'GET',
             credentials: 'include'
         });
@@ -40,10 +40,9 @@ async function fetchAndDisplayUserRecipes() {
             return;
         }
         
-        const data = await response.json();
-        const recipes = data.recipes || [];
+        const recipes = await response.json();
         
-        console.log('Fetched recipes:', recipes);
+        console.log('Fetched user recipes:', recipes);
         
         const recipesGrid = document.querySelector('.recipes-grid');
         
@@ -349,10 +348,8 @@ class RecipeCreator {
                 submitBtn.textContent = originalText;
                 submitBtn.disabled = false;
                 
-                // Refresh page after 1 second to show new recipe
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                // Refresh user recipes after creation
+                await fetchAndDisplayUserRecipes();
             } else {
                 showCustomAlert(data.message || 'Greška pri dodavanju recepta', 'Greška');
                 submitBtn.textContent = originalText;

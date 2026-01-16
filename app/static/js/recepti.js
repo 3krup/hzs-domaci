@@ -8,6 +8,7 @@ let activeFilters = {
 };
 
 let favorites = [];
+let allRecipes = [];
 
 // DOM Elements
 const recipePopup = document.getElementById('recipePopup');
@@ -32,6 +33,32 @@ const searchBtn = document.querySelector('.search-btn');
 const favoritesFilterBtn = document.getElementById('favoritesFilterBtn');
 const favoriteButtons = document.querySelectorAll('.favorite-btn');
 
+// Load saved recipes (favorites) from backend
+async function loadSavedRecipes() {
+    if (!authState.isLoggedIn) {
+        favorites = [];
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/saved-recipes`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if (response.ok) {
+            const savedRecipes = await response.json();
+            favorites = savedRecipes.map(r => r.id.toString());
+            console.log('Loaded saved recipes:', favorites);
+        } else {
+            favorites = [];
+        }
+    } catch (error) {
+        console.error('Error loading saved recipes:', error);
+        favorites = [];
+    }
+}
+
 // Fetch and display all recipes from database
 async function fetchAllRecipes() {
     try {
@@ -45,19 +72,22 @@ async function fetchAllRecipes() {
             return false;
         }
         
-        const data = await response.json();
-        const dbRecipes = data.recipes || [];
+        const allRecipes_data = await response.json();
+        allRecipes = Array.isArray(allRecipes_data) ? allRecipes_data : (allRecipes_data.recipes || []);
         
-        console.log('Fetched recipes from database:', dbRecipes);
+        console.log('Fetched recipes from database:', allRecipes);
         
         // Convert database recipes to the format used by the page
         const recipesGrid = document.querySelector('.recipes-grid');
         recipesGrid.innerHTML = '';
         
-        dbRecipes.forEach(recipe => {
+        allRecipes.forEach(recipe => {
             const recipeCard = createDatabaseRecipeCard(recipe);
             recipesGrid.appendChild(recipeCard);
         });
+        
+        // Attach event listeners to favorite buttons
+        attachFavoriteListeners();
         
         return true;
     } catch (error) {
@@ -155,50 +185,6 @@ function getDietTypeLabel(dietType) {
         'halal': 'Halal'
     };
     return labels[dietType] || dietType;
-}
-
-// Load favorites from localStorage
-function loadFavorites() {
-    const stored = localStorage.getItem('favorites');
-    if (stored) {
-        favorites = JSON.parse(stored);
-        updateFavoriteButtons();
-    }
-}
-
-// Load favorites from backend
-async function loadFavoritesFromBackend() {
-    if (!authState.isLoggedIn) {
-        loadFavorites(); // Fallback to localStorage if not logged in
-        return;
-    }
-    
-    try {
-        const response = await fetch(`${API_BASE_URL}/my-recipes`, {
-            method: 'GET',
-            credentials: 'include'
-        });
-        
-        if (response.ok) {
-            const recipes = await response.json();
-            favorites = recipes.map(r => r.id.toString());
-            saveFavorites();
-            updateFavoriteButtons();
-            console.log('Loaded favorites from backend:', favorites);
-        } else {
-            // Fallback to localStorage
-            loadFavorites();
-        }
-    } catch (error) {
-        console.error('Error loading favorites:', error);
-        // Fallback to localStorage
-        loadFavorites();
-    }
-}
-
-// Save favorites to localStorage
-function saveFavorites() {
-    localStorage.setItem('favorites', JSON.stringify(favorites));
 }
 
 // Update favorite button UI
@@ -378,9 +364,24 @@ function filterRecipes(recipes) {
             return false;
         }
         
-        // Filter by diet type (posno = is_posno)
-        if (activeFilters['tip-ishrane'] === 'posno' && !recipe.is_posno) {
-            return false;
+        // Filter by diet type - check all diet options
+        if (activeFilters['tip-ishrane']) {
+            const dietFilter = activeFilters['tip-ishrane'];
+            let dietMatches = false;
+            
+            if (dietFilter === 'posno' && recipe.is_posno) {
+                dietMatches = true;
+            } else if (dietFilter === 'halal' && recipe.is_halal) {
+                dietMatches = true;
+            } else if (dietFilter === 'vegetarian' && recipe.is_vegetarian) {
+                dietMatches = true;
+            } else if (dietFilter === 'vegan' && recipe.is_vegan) {
+                dietMatches = true;
+            }
+            
+            if (!dietMatches) {
+                return false;
+            }
         }
         
         // Filter by max time
@@ -451,12 +452,16 @@ function handleFavoriteClick(e) {
     const recipeId = this.dataset.recipe;
     const isCurrentlyFavorite = favorites.includes(recipeId.toString());
     
-    // All recipes are from database - save to backend
+    // Save to backend using /saved-recipes endpoint
     const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
     
-    fetch(`${API_BASE_URL}/recipes/${recipeId}/save`, {
+    fetch(`${API_BASE_URL}/saved-recipes`, {
         method: method,
-        credentials: 'include'
+        credentials: 'include',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ recipe_id: recipeId })
     })
     .then(response => {
         if (response.ok) {
@@ -467,7 +472,6 @@ function handleFavoriteClick(e) {
                 favorites.push(recipeId.toString());
             }
             
-            saveFavorites();
             updateFavoriteButtons();
             showCustomAlert('Uspešno', 'Dodan u favorite');
             console.log('Recipe favorite toggled for:', recipeId, 'Favorites:', favorites);
@@ -479,6 +483,25 @@ function handleFavoriteClick(e) {
     .catch(error => {
         showCustomAlert('Greška pri dodavanju u favorite', 'Greška');
         console.error('Error saving favorite:', error);
+    });
+}
+
+function attachFavoriteListeners() {
+    const favoriteButtons = document.querySelectorAll('.favorite-btn');
+    
+    favoriteButtons.forEach(btn => {
+        btn.removeEventListener('click', handleFavoriteClick);
+        btn.addEventListener('click', handleFavoriteClick);
+        
+        // Update button state based on current favorites
+        const recipeId = btn.dataset.recipe;
+        if (favorites.includes(recipeId.toString())) {
+            btn.classList.add('active');
+            btn.innerHTML = '<i class="fas fa-heart"></i>';
+        } else {
+            btn.classList.remove('active');
+            btn.innerHTML = '<i class="far fa-heart"></i>';
+        }
     });
 }
 
@@ -504,35 +527,81 @@ function handleDetailsClick(e) {
     const title = card.querySelector('h3').textContent;
     const stats = card.querySelectorAll('.stat');
     
+    // Show loading state
     document.getElementById('popupImage').src = cardImageSrc;
     document.getElementById('popupImage').alt = title;
     document.getElementById('popupTitle').textContent = title;
-    document.getElementById('popupDescription').textContent = 'Detalji recepta';
-    
-    // Set stats from card
-    const popupStats = document.getElementById('popupStats');
-    const statsText = Array.from(stats).map(s => s.textContent);
-    
-    popupStats.innerHTML = `
-        <div style="display: flex; gap: 20px;">
-            <div>
-                <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${statsText[0]?.split(' ')[0] || 'N/A'}</span>
-                <span style="color: #666; margin-left: 5px;">kcal</span>
-            </div>
-            <div>
-                <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${statsText[1]?.split('g')[0] || 'N/A'}g</span>
-                <span style="color: #666; margin-left: 5px;">protein</span>
-            </div>
-        </div>
-    `;
-    
-    // Clear ingredients/instructions (not available in database schema)
-    document.getElementById('ingredientsList').innerHTML = '<li>Detalji recepta nisu dostupni</li>';
-    document.getElementById('instructionsList').innerHTML = '<li>Detalji recepta nisu dostupni</li>';
+    document.getElementById('popupDescription').textContent = 'Učitavanje detalja...';
+    document.getElementById('ingredientsList').innerHTML = '<li>Učitavanje...</li>';
+    document.getElementById('instructionsList').innerHTML = '<li>Učitavanje...</li>';
     document.getElementById('nutritionGrid').innerHTML = '';
     
     recipePopup.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    
+    // Fetch full recipe details from backend
+    fetch(`/recipes/${recipeId}`)
+        .then(response => response.json())
+        .then(recipe => {
+            // Update description
+            document.getElementById('popupDescription').textContent = recipe.description || 'Nema dostupnog opisa';
+            
+            // Update ingredients
+            if (recipe.ingredients && recipe.ingredients.length > 0) {
+                const ingredientsHTML = recipe.ingredients.map(ingredient => `<li>${ingredient}</li>`).join('');
+                document.getElementById('ingredientsList').innerHTML = ingredientsHTML;
+            } else {
+                document.getElementById('ingredientsList').innerHTML = '<li>Nema dostupnih sastojaka</li>';
+            }
+            
+            // Update instructions
+            if (recipe.instructions && recipe.instructions.length > 0) {
+                const instructionsHTML = recipe.instructions.map(instruction => `<li>${instruction}</li>`).join('');
+                document.getElementById('instructionsList').innerHTML = instructionsHTML;
+            } else {
+                document.getElementById('instructionsList').innerHTML = '<li>Nema dostupnih uputstava</li>';
+            }
+            
+            // Update nutrition info
+            const popupStats = document.getElementById('popupStats');
+            popupStats.innerHTML = `
+                <div style="display: flex; gap: 20px; flex-wrap: wrap;">
+                    ${recipe.kcal !== null ? `<div>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.kcal}</span>
+                        <span style="color: #666; margin-left: 5px;">kcal</span>
+                    </div>` : ''}
+                    ${recipe.protein !== null ? `<div>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.protein}</span>
+                        <span style="color: #666; margin-left: 5px;">g proteina</span>
+                    </div>` : ''}
+                    ${recipe.fat !== null ? `<div>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.fat}</span>
+                        <span style="color: #666; margin-left: 5px;">g masti</span>
+                    </div>` : ''}
+                    ${recipe.carbs !== null ? `<div>
+                        <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${recipe.carbs}</span>
+                        <span style="color: #666; margin-left: 5px;">g ugljenih</span>
+                    </div>` : ''}
+                </div>
+            `;
+            
+            // Build nutrition grid
+            let nutritionHTML = '';
+            if (recipe.kcal !== null) nutritionHTML += `<div><strong>Kalorije:</strong> ${recipe.kcal} kcal</div>`;
+            if (recipe.protein !== null) nutritionHTML += `<div><strong>Proteini:</strong> ${recipe.protein}g</div>`;
+            if (recipe.fat !== null) nutritionHTML += `<div><strong>Masti:</strong> ${recipe.fat}g</div>`;
+            if (recipe.carbs !== null) nutritionHTML += `<div><strong>Ugljenohdrati:</strong> ${recipe.carbs}g</div>`;
+            
+            if (nutritionHTML) {
+                document.getElementById('nutritionGrid').innerHTML = nutritionHTML;
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching recipe details:', error);
+            document.getElementById('popupDescription').textContent = 'Greška pri učitavanju detalja';
+            document.getElementById('ingredientsList').innerHTML = '<li>Greška pri učitavanju</li>';
+            document.getElementById('instructionsList').innerHTML = '<li>Greška pri učitavanju</li>';
+        });
 }
 
 
@@ -555,6 +624,9 @@ favoritesFilterBtn.addEventListener('click', async (e) => {
         document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
         return;
     }
+    
+    // Load saved recipes first
+    await loadSavedRecipes();
     
     // Toggle favorites filter
     activeFilters['showFavoritesOnly'] = !activeFilters['showFavoritesOnly'];
@@ -713,26 +785,40 @@ function setupAuthButtons() {
     const signupForm = document.getElementById('signupForm');
     
     if (prijaviSeBtn) {
-        prijaviSeBtn.addEventListener('click', () => {
-            authPopup.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-            loginForm.classList.add('active');
-            signupForm.classList.remove('active');
-            document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-            document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-        });
+        // Remove any existing listeners
+        prijaviSeBtn.removeEventListener('click', prijaviSeBtn._authClickHandler);
+        
+        // Only add listener if user is not logged in
+        if (!authState.isLoggedIn) {
+            prijaviSeBtn._authClickHandler = () => {
+                authPopup.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                loginForm.classList.add('active');
+                signupForm.classList.remove('active');
+                document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+                document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+            };
+            prijaviSeBtn.addEventListener('click', prijaviSeBtn._authClickHandler);
+        }
     }
 
     if (prijaviSeMobileBtn) {
-        prijaviSeMobileBtn.addEventListener('click', () => {
-            authPopup.style.display = 'flex';
-            document.getElementById('mobileMenu').classList.remove('active');
-            document.body.style.overflow = 'hidden';
-            loginForm.classList.add('active');
-            signupForm.classList.remove('active');
-            document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-            document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-        });
+        // Remove any existing listeners
+        prijaviSeMobileBtn.removeEventListener('click', prijaviSeMobileBtn._authClickHandler);
+        
+        // Only add listener if user is not logged in
+        if (!authState.isLoggedIn) {
+            prijaviSeMobileBtn._authClickHandler = () => {
+                authPopup.style.display = 'flex';
+                document.getElementById('mobileMenu').classList.remove('active');
+                document.body.style.overflow = 'hidden';
+                loginForm.classList.add('active');
+                signupForm.classList.remove('active');
+                document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+                document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+            };
+            prijaviSeMobileBtn.addEventListener('click', prijaviSeMobileBtn._authClickHandler);
+        }
     }
 }
 
@@ -977,8 +1063,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Setup auth buttons
     setupAuthButtons();
     
-    // Load favorites from backend if logged in, otherwise from localStorage
-    await loadFavoritesFromBackend();
+    // Load saved recipes (favorites) from backend if logged in
+    await loadSavedRecipes();
     
     // Apply filters (which will fetch and display recipes)
     await applyFilters();

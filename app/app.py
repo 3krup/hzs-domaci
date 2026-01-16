@@ -247,6 +247,49 @@ def get_latest_recipes():
             recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
     return jsonify(recipes)
 
+@app.route('/recipes/<int:recipe_id>', methods=['GET'])
+def get_recipe(recipe_id):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+    
+    # Fetch recipe details
+    cursor.execute("""
+        SELECT id, title, description, preparation_steps, prep_time_minutes, difficulty,
+               kcal, protein, fat, image_url, is_posno, is_halal, is_vegetarian, is_vegan, meal_type
+        FROM recipes WHERE id = %s
+    """, (recipe_id,))
+    recipe = cursor.fetchone()
+    
+    if not recipe:
+        conn.close()
+        return jsonify({'message': 'Recept ne postoji'}), 404
+    
+    # Fetch ingredients for this recipe
+    cursor.execute("""
+        SELECT i.name, ri.quantity
+        FROM recipe_ingredients ri
+        JOIN ingredients i ON ri.ingredient_id = i.id
+        WHERE ri.recipe_id = %s
+    """, (recipe_id,))
+    ingredients = cursor.fetchall()
+    recipe['ingredients'] = [f"{ing['quantity']} {ing['name']}" if ing['quantity'] else ing['name'] for ing in ingredients]
+    
+    # Parse preparation steps as instructions (they're stored as text)
+    if recipe['preparation_steps']:
+        # Split by newlines or numbers like "1.", "2.", etc.
+        steps = recipe['preparation_steps'].split('\n')
+        recipe['instructions'] = [step.strip() for step in steps if step.strip()]
+    else:
+        recipe['instructions'] = []
+    
+    # Format image URL
+    if recipe['image_url']:
+        recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
+    
+    conn.close()
+    return jsonify(recipe)
+
+
 @app.route('/recipes/<int:recipe_id>', methods=['DELETE'])
 @token_required
 def delete_recipe(current_user_id, recipe_id):

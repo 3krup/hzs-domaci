@@ -16,48 +16,30 @@ const authTabs = document.querySelectorAll('.auth-tab');
 const loginForm = document.getElementById('loginForm');
 const signupForm = document.getElementById('signupForm');
 
-// Load favorites from localStorage
-function loadFavorites() {
-    const stored = localStorage.getItem('favorites');
-    if (stored) {
-        favorites = JSON.parse(stored);
-        updateFavoriteButtons();
-    }
-}
-
-// Load favorites from backend
+// Load saved recipes (favorites) from backend
 async function loadFavoritesFromBackend() {
     if (!authState.isLoggedIn) {
-        loadFavorites(); // Fallback to localStorage if not logged in
+        favorites = [];
         return;
     }
     
     try {
-        const response = await fetch(`${API_BASE_URL}/my-recipes`, {
+        const response = await fetch(`${API_BASE_URL}/saved-recipes`, {
             method: 'GET',
             credentials: 'include'
         });
         
         if (response.ok) {
-            const recipes = await response.json();
-            favorites = recipes.map(r => r.id.toString());
-            saveFavorites();
-            updateFavoriteButtons();
-            console.log('Loaded favorites from backend:', favorites);
+            const savedRecipes = await response.json();
+            favorites = savedRecipes.map(r => r.id.toString());
+            console.log('Loaded saved recipes:', favorites);
         } else {
-            // Fallback to localStorage
-            loadFavorites();
+            favorites = [];
         }
     } catch (error) {
-        console.error('Error loading favorites:', error);
-        // Fallback to localStorage
-        loadFavorites();
+        console.error('Error loading saved recipes:', error);
+        favorites = [];
     }
-}
-
-// Save favorites to localStorage
-function saveFavorites() {
-    localStorage.setItem('favorites', JSON.stringify(favorites));
 }
 
 // Close Recipe Popup
@@ -99,26 +81,40 @@ function setupAuthButtons() {
     const prijaviSeMobileBtn = document.getElementById('prijaviSeMobileBtn');
     
     if (prijaviSeBtn) {
-        prijaviSeBtn.addEventListener('click', () => {
-            authPopup.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-            loginForm.classList.add('active');
-            signupForm.classList.remove('active');
-            document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-            document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-        });
+        // Remove any existing listeners
+        prijaviSeBtn.removeEventListener('click', prijaviSeBtn._authClickHandler);
+        
+        // Only add listener if user is not logged in
+        if (!authState.isLoggedIn) {
+            prijaviSeBtn._authClickHandler = () => {
+                authPopup.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                loginForm.classList.add('active');
+                signupForm.classList.remove('active');
+                document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+                document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+            };
+            prijaviSeBtn.addEventListener('click', prijaviSeBtn._authClickHandler);
+        }
     }
     
     if (prijaviSeMobileBtn) {
-        prijaviSeMobileBtn.addEventListener('click', () => {
-            authPopup.style.display = 'flex';
-            mobileMenu.classList.remove('active');
-            document.body.style.overflow = 'hidden';
-            loginForm.classList.add('active');
-            signupForm.classList.remove('active');
-            document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-            document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-        });
+        // Remove any existing listeners
+        prijaviSeMobileBtn.removeEventListener('click', prijaviSeMobileBtn._authClickHandler);
+        
+        // Only add listener if user is not logged in
+        if (!authState.isLoggedIn) {
+            prijaviSeMobileBtn._authClickHandler = () => {
+                authPopup.style.display = 'flex';
+                mobileMenu.classList.remove('active');
+                document.body.style.overflow = 'hidden';
+                loginForm.classList.add('active');
+                signupForm.classList.remove('active');
+                document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+                document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+            };
+            prijaviSeMobileBtn.addEventListener('click', prijaviSeMobileBtn._authClickHandler);
+        }
     }
 }
 
