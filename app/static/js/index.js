@@ -636,7 +636,6 @@ function attachRecipeCardListeners() {
                         btn.innerHTML = '<i class="fas fa-heart"></i>';
                         favorites.push(recipeId.toString());
                     }
-                    showCustomAlert('Uspešno', 'Dodan u favorite');
                 } else {
                     console.error('Failed to save favorite');
                 }

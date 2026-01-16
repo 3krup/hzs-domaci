@@ -34,6 +34,26 @@ window.addEventListener('pageshow', async () => {
     }
 });
 
+// Recipe details popup elements
+const recipePopup = document.getElementById('recipePopup');
+const closeRecipePopup = document.getElementById('closeRecipePopup');
+
+if (closeRecipePopup) {
+    closeRecipePopup.addEventListener('click', () => {
+        recipePopup.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    });
+}
+
+if (recipePopup) {
+    recipePopup.addEventListener('click', (e) => {
+        if (e.target === recipePopup) {
+            recipePopup.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    });
+}
+
 // Check if user is logged in before allowing access
 // Fetch and display user's created recipes
 async function fetchAndDisplayUserRecipes() {

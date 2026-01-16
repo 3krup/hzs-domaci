@@ -25,7 +25,7 @@ const authTabs = document.querySelectorAll('.auth-tab');
 const loginForm = document.getElementById('loginForm');
 const signupForm = document.getElementById('signupForm');
 const tipObrokaFilter = document.getElementById('tipObrokaFilter');
-const tipIshraneFilter = document.getElementById('tipIshrane Filter');
+const tipIshraneFilter = document.getElementById('tipIshraneFilter');
 const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 const searchInput = document.getElementById('searchInput');
 const maxMinutasInput = document.getElementById('maxMinutasInput');
@@ -107,68 +107,36 @@ function createDatabaseRecipeCard(recipe) {
         dietLabel = 'Posno';
     }
     
+    // Create recipe card HTML
     const card = document.createElement('div');
     card.className = 'recipe-card';
     card.dataset.recipe = recipe.id;
     
-    // Determine image source
-    let imageSrc = '';
-    if (recipe.image_url && recipe.image_url.startsWith('http')) {
-        imageSrc = recipe.image_url;
-    } else if (recipe.image_url) {
-        imageSrc = API_BASE_URL + '/uploads/' + recipe.image_url;
-    } else if (recipe.image) {
-        // Hardcoded recipe - add ../ prefix for relative path
-        imageSrc = '../' + recipe.image;
-    }
+    const imageUrl = normalizeImageUrl(recipe.image_url);
     
     card.innerHTML = `
-        <div class="recipe-image">
-            <img src="${imageSrc}" alt="${recipe.title}">
+        <div class="recipe-image-container">
+            <img src="${imageUrl}" alt="${recipe.title}" class="recipe-image">
             <button class="favorite-btn" data-recipe="${recipe.id}">
                 <i class="far fa-heart"></i>
             </button>
         </div>
         <div class="recipe-info">
-            <div class="recipe-tags">
-                <span class="tag tag-meal">${mealTypeLabel}</span>
-                <span class="tag tag-diet">${dietLabel}</span>
-            </div>
             <h3>${recipe.title}</h3>
             <div class="recipe-stats">
-                <div class="stat">
-                    <span class="value">${recipe.kcal}</span>
-                    <span class="label">kcal</span>
-                </div>
-                <div class="stat">
-                    <span class="value">${recipe.protein}g</span>
-                    <span class="label">protein</span>
-                </div>
-                <div class="stat">
-                    <span class="value">${recipe.fat}g</span>
-                    <span class="label">masti</span>
-                </div>
-                ${recipe.prep_time_minutes ? `<div class="stat">
-                    <span class="value">${recipe.prep_time_minutes}</span>
-                    <span class="label">min</span>
-                </div>` : ''}
+                <span class="stat"><i class="fas fa-clock"></i> ${recipe.prep_time_minutes || 0} min</span>
+                <span class="stat"><i class="fas fa-fire"></i> ${recipe.kcal || 0} kcal</span>
+                <span class="stat"><i class="fas fa-utensils"></i> ${mealTypeLabel}</span>
             </div>
-            <p class="difficulty"><i class="fas fa-signal"></i> Slozenost: ${difficultyLabel}</p>
-            <button class="btn-recipe-details">Detaljnije</button>
+            <div class="recipe-tags">
+                <span class="tag">${difficultyLabel}</span>
+                <span class="tag">${dietLabel}</span>
+            </div>
+            <button class="btn-recipe-details">Detalji</button>
         </div>
     `;
     
     return card;
-}
-
-function getMealTypeLabel(mealType) {
-    const labels = {
-        'dorucak': 'Doručak',
-        'rucak': 'Ručak',
-        'vecera': 'Večera',
-        'uzina': 'Užina'
-    };
-    return labels[mealType] || mealType;
 }
 
 function getDifficultyLabel(difficulty) {
@@ -186,6 +154,19 @@ function getDietTypeLabel(dietType) {
         'halal': 'Halal'
     };
     return labels[dietType] || dietType;
+}
+
+function normalizeImageUrl(imageUrl) {
+    if (!imageUrl) {
+        return '../static/images/logo 5.png';
+    }
+    if (imageUrl.startsWith('http')) {
+        return imageUrl;
+    }
+    if (imageUrl.startsWith('/static/') || imageUrl.startsWith('static/')) {
+        return `${API_BASE_URL}/${imageUrl.replace(/^\//, '')}`;
+    }
+    return `${API_BASE_URL}/static/uploads/${imageUrl}`;
 }
 
 // Update favorite button UI
@@ -489,9 +470,12 @@ function handleDetailsClick(e) {
     document.body.style.overflow = 'hidden';
     
     // Fetch full recipe details from backend
-    fetch(`/recipes/${recipeId}`)
+    fetch(`${API_BASE_URL}/recipes/${recipeId}`)
         .then(response => response.json())
         .then(recipe => {
+            if (recipe.image_url) {
+                document.getElementById('popupImage').src = normalizeImageUrl(recipe.image_url);
+            }
             // Update description
             document.getElementById('popupDescription').textContent = recipe.description || 'Nema dostupnog opisa';
             
