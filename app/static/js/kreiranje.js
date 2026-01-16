@@ -1,229 +1,330 @@
-const API_URL = 'http://127.0.0.1:5000';
-
-let isLoggedIn = false;
-let currentUser = null;
-
-const kreirajBtn = document.getElementById('kreirajBtn');
-const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-const mobileMenu = document.getElementById('mobileMenu');
-const prijaviSeBtn = document.getElementById('prijaviSeBtn');
-const prijaviSeMobileBtn = document.getElementById('prijaviSeMobileBtn');
-const authPopup = document.getElementById('authPopup');
-const closeAuth = document.getElementById('closeAuth');
-const authTabs = document.querySelectorAll('.auth-tab');
-const loginForm = document.getElementById('loginForm');
-const signupForm = document.getElementById('signupForm');
-const recipeForm = document.getElementById('recipeForm');
-const backToTop = document.getElementById('backToTop');
-
-if (kreirajBtn) {
-    kreirajBtn.addEventListener('click', () => {
-        if (!isLoggedIn) {
-            authPopup.style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-            loginForm.classList.add('active');
-            signupForm.classList.remove('active');
-            document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-            document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-            return;
-        }
-        recipeForm.classList.toggle('hidden');
-        recipeForm.scrollIntoView({ behavior: 'smooth' });
-    });
-}
-
-mobileMenuBtn.addEventListener('click', () => {
-    mobileMenu.classList.toggle('active');
-});
-
-document.addEventListener('click', (e) => {
-    if (!mobileMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
-        mobileMenu.classList.remove('active');
+// Recipe Creation Form Handler
+class RecipeCreator {
+    constructor() {
+        this.form = document.getElementById('createRecipeForm');
+        this.popup = document.getElementById('createRecipePopup');
+        this.addRecipeCard = document.getElementById('addRecipeCard');
+        this.closePopupBtn = document.getElementById('closePopup');
+        this.cancelBtn = document.getElementById('cancelBtn');
+        this.addNutritionBtn = document.getElementById('addNutritionBtn');
+        this.imagePreview = document.getElementById('imagePreview');
+        this.recipeImage = document.getElementById('recipeImage');
+        this.additionalNutrition = document.getElementById('additionalNutrition');
+        
+        this.recipeData = {
+            image: null,
+            name: '',
+            difficulty: '',
+            prepTime: 0,
+            mealType: '',
+            dietType: '',
+            ingredients: [],
+            instructions: [],
+            nutrition: {
+                kcal: 0,
+                protein: 0,
+                masti: 0,
+                additional: []
+            }
+        };
+        
+        this.additionalNutritionCount = 0;
+        this.init();
     }
-});
-
-prijaviSeBtn.addEventListener('click', () => {
-    authPopup.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    loginForm.classList.add('active');
-    signupForm.classList.remove('active');
-    document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-    document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-});
-
-prijaviSeMobileBtn.addEventListener('click', () => {
-    authPopup.style.display = 'flex';
-    mobileMenu.classList.remove('active');
-    document.body.style.overflow = 'hidden';
-    loginForm.classList.add('active');
-    signupForm.classList.remove('active');
-    document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-    document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-});
-
-closeAuth.addEventListener('click', () => {
-    authPopup.style.display = 'none';
-    document.body.style.overflow = 'auto';
-});
-
-authPopup.addEventListener('click', (e) => {
-    if (e.target === authPopup) {
-        authPopup.style.display = 'none';
+    
+    init() {
+        // Add Recipe Card Click
+        this.addRecipeCard.addEventListener('click', () => this.openPopup());
+        
+        // Close Popup
+        this.closePopupBtn.addEventListener('click', () => this.closePopup());
+        this.cancelBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.closePopup();
+        });
+        
+        // Close popup when clicking outside
+        this.popup.addEventListener('click', (e) => {
+            if (e.target === this.popup) {
+                this.closePopup();
+            }
+        });
+        
+        // Image Upload
+        this.imagePreview.addEventListener('click', () => this.recipeImage.click());
+        this.recipeImage.addEventListener('change', (e) => this.handleImageUpload(e));
+        
+        // Add Additional Nutrition Field
+        this.addNutritionBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.addAdditionalNutritionField();
+        });
+        
+        // Form Submit
+        this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
+        
+        // Mobile Menu
+        this.setupMobileMenu();
+        
+        // Scroll to Top
+        this.setupScrollToTop();
+    }
+    
+    openPopup() {
+        this.popup.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        this.resetForm();
+    }
+    
+    closePopup() {
+        this.popup.classList.remove('active');
         document.body.style.overflow = 'auto';
     }
-});
-
-authTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        const tabName = tab.dataset.tab;
-        authTabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        loginForm.classList.remove('active');
-        signupForm.classList.remove('active');
-        if (tabName === 'login') {
-            loginForm.classList.add('active');
-        } else {
-            signupForm.classList.add('active');
+    
+    resetForm() {
+        this.form.reset();
+        this.imagePreview.classList.remove('has-image');
+        this.additionalNutrition.innerHTML = '';
+        this.additionalNutritionCount = 0;
+        this.recipeData = {
+            image: null,
+            name: '',
+            difficulty: '',
+            prepTime: 0,
+            mealType: '',
+            dietType: '',
+            ingredients: [],
+            instructions: [],
+            nutrition: {
+                kcal: 0,
+                protein: 0,
+                masti: 0,
+                additional: []
+            }
+        };
+    }
+    
+    handleImageUpload(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                this.recipeData.image = event.target.result;
+                this.displayImagePreview(event.target.result);
+            };
+            reader.readAsDataURL(file);
         }
-    });
-});
-
-loginForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value.trim();
-    document.getElementById('loginEmailError').textContent = '';
-    document.getElementById('loginPasswordError').textContent = '';
-    if (!email) {
-        document.getElementById('loginEmailError').textContent = 'Email je obavezan';
-        return;
     }
-    if (!password) {
-        document.getElementById('loginPasswordError').textContent = 'Lozinka je obavezna';
-        return;
+    
+    displayImagePreview(imageSrc) {
+        this.imagePreview.classList.add('has-image');
+        // Remove existing image if any
+        const existingImg = this.imagePreview.querySelector('img');
+        if (existingImg) {
+            existingImg.remove();
+        }
+        // Add new image
+        const img = document.createElement('img');
+        img.src = imageSrc;
+        this.imagePreview.appendChild(img);
     }
-    try {
-        const response = await fetch(`${API_URL}/login`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'include',
-            body: JSON.stringify({ email, password })
+    
+    addAdditionalNutritionField() {
+        this.additionalNutritionCount++;
+        const fieldId = `additional-nutrition-${this.additionalNutritionCount}`;
+        
+        const container = document.createElement('div');
+        container.className = 'additional-nutrition-item';
+        container.id = fieldId;
+        
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.placeholder = 'Naziv (npr. Ugljeni hidrati)';
+        nameInput.className = 'nutrition-name-input';
+        
+        const valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.placeholder = 'Vrednost (npr. 20g)';
+        valueInput.className = 'nutrition-value-input';
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'btn-remove-nutrition';
+        removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
+        removeBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            container.remove();
         });
-        const data = await response.json();
-        if (response.ok) {
-            isLoggedIn = true;
-            currentUser = email;
-            localStorage.setItem('user', email);
-            authPopup.style.display = 'none';
-            document.body.style.overflow = 'auto';
-            loginForm.reset();
-            updateButtonUI();
-            alert('Uspešna prijava!');
-            location.reload();
-        } else {
-            document.getElementById('loginEmailError').textContent = data.message || 'Greška pri prijavi';
-        }
-    } catch (error) {
-        console.error('Login error:', error);
-        document.getElementById('loginEmailError').textContent = 'Greška pri povezivanju sa serverom';
+        
+        container.appendChild(nameInput);
+        container.appendChild(valueInput);
+        container.appendChild(removeBtn);
+        
+        this.additionalNutrition.appendChild(container);
     }
-});
-
-signupForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value.trim();
-    document.getElementById('signupEmailError').textContent = '';
-    document.getElementById('signupPasswordError').textContent = '';
-    if (!email) {
-        document.getElementById('signupEmailError').textContent = 'Email je obavezan';
-        return;
-    }
-    if (!password || password.length < 6) {
-        document.getElementById('signupPasswordError').textContent = 'Lozinka mora imati najmanje 6 karaktera';
-        return;
-    }
-    try {
-        const response = await fetch(`${API_URL}/register`, {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            credentials: 'include',
-            body: JSON.stringify({ email, password })
+    
+    collectFormData() {
+        this.recipeData.name = document.getElementById('recipeName').value;
+        this.recipeData.difficulty = document.getElementById('difficulty').value;
+        this.recipeData.prepTime = parseInt(document.getElementById('prepTime').value);
+        this.recipeData.mealType = document.getElementById('mealType').value;
+        this.recipeData.dietType = document.getElementById('dietType').value;
+        
+        // Parse ingredients (split by newline)
+        const ingredientsText = document.getElementById('ingredients').value;
+        this.recipeData.ingredients = ingredientsText
+            .split('\n')
+            .map(item => item.trim())
+            .filter(item => item !== '');
+        
+        // Parse instructions (split by newline)
+        const instructionsText = document.getElementById('instructions').value;
+        this.recipeData.instructions = instructionsText
+            .split('\n')
+            .map(item => item.trim())
+            .filter(item => item !== '');
+        
+        // Mandatory nutrition values
+        this.recipeData.nutrition.kcal = parseFloat(document.querySelector('[data-nutrition="kcal"]').value) || 0;
+        this.recipeData.nutrition.protein = parseFloat(document.querySelector('[data-nutrition="protein"]').value) || 0;
+        this.recipeData.nutrition.masti = parseFloat(document.querySelector('[data-nutrition="masti"]').value) || 0;
+        
+        // Additional nutrition values
+        this.recipeData.nutrition.additional = [];
+        const additionalFields = this.additionalNutrition.querySelectorAll('.additional-nutrition-item');
+        additionalFields.forEach(field => {
+            const nameInput = field.querySelector('.nutrition-name-input').value;
+            const valueInput = field.querySelector('.nutrition-value-input').value;
+            if (nameInput && valueInput) {
+                this.recipeData.nutrition.additional.push({
+                    name: nameInput,
+                    value: valueInput
+                });
+            }
         });
-        const data = await response.json();
-        if (response.status === 201) {
-            isLoggedIn = true;
-            currentUser = email;
-            localStorage.setItem('user', email);
-            authPopup.style.display = 'none';
-            document.body.style.overflow = 'auto';
-            signupForm.reset();
-            updateButtonUI();
-            alert('Uspešna registracija!');
-            location.reload();
-        } else {
-            document.getElementById('signupEmailError').textContent = data.message || 'Greška pri registraciji';
-        }
-    } catch (error) {
-        console.error('Signup error:', error);
-        document.getElementById('signupEmailError').textContent = 'Greška pri povezivanju sa serverom';
     }
-});
-
-function updateButtonUI() {
-    if (isLoggedIn && currentUser) {
-        prijaviSeBtn.textContent = currentUser;
-        prijaviSeBtn.style.color = '#4CAF50';
-        prijaviSeMobileBtn.textContent = currentUser;
-    } else {
-        prijaviSeBtn.textContent = 'Prijavi Se';
-        prijaviSeBtn.style.color = 'inherit';
-        prijaviSeMobileBtn.textContent = 'Prijavi Se';
+    
+    handleFormSubmit(e) {
+        e.preventDefault();
+        
+        // Validate required fields
+        if (!this.form.checkValidity()) {
+            alert('Molimo popunite sve obavezne polje');
+            return;
+        }
+        
+        // Collect all form data
+        this.collectFormData();
+        
+        // Validate ingredients and instructions
+        if (this.recipeData.ingredients.length === 0) {
+            alert('Molimo dodajte bar jedan sastojak');
+            return;
+        }
+        
+        if (this.recipeData.instructions.length === 0) {
+            alert('Molimo dodajte bar jedan korak pripreme');
+            return;
+        }
+        
+        // Log data for API integration (ready for backend)
+        console.log('Recipe Data Ready for API:', this.recipeData);
+        
+        // Prepare data for API
+        const apiPayload = this.prepareAPIPayload();
+        console.log('API Payload:', apiPayload);
+        
+        // TODO: Send to API when available
+        // this.sendToAPI(apiPayload);
+        
+        // Success message
+        alert('Recept je sacuvan!\n\nOvaj recept ce uskoro biti dostupan nakon integracije sa bazom podataka.');
+        this.closePopup();
+        this.resetForm();
+    }
+    
+    prepareAPIPayload() {
+        return {
+            name: this.recipeData.name,
+            difficulty: this.recipeData.difficulty,
+            prepTime: this.recipeData.prepTime,
+            tags: {
+                meal: this.recipeData.mealType,
+                diet: this.recipeData.dietType
+            },
+            ingredients: this.recipeData.ingredients,
+            instructions: this.recipeData.instructions,
+            nutrition: {
+                kcal: this.recipeData.nutrition.kcal,
+                protein: this.recipeData.nutrition.protein,
+                masti: this.recipeData.nutrition.masti,
+                additional: this.recipeData.nutrition.additional
+            },
+            image: this.recipeData.image, // Base64 or file reference
+            createdAt: new Date().toISOString(),
+            userId: null // Will be set from authentication
+        };
+    }
+    
+    // Placeholder for API integration
+    sendToAPI(payload) {
+        // TODO: Implement API call
+        // fetch('/api/recipes', {
+        //     method: 'POST',
+        //     headers: {
+        //         'Content-Type': 'application/json',
+        //         'Authorization': `Bearer ${authToken}`
+        //     },
+        //     body: JSON.stringify(payload)
+        // })
+        // .then(response => response.json())
+        // .then(data => {
+        //     console.log('Recipe created:', data);
+        //     this.closePopup();
+        //     this.resetForm();
+        //     // Refresh recipes list
+        // })
+        // .catch(error => console.error('Error:', error));
+    }
+    
+    setupMobileMenu() {
+        const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+        const mobileMenu = document.getElementById('mobileMenu');
+        
+        mobileMenuBtn.addEventListener('click', () => {
+            mobileMenu.classList.toggle('active');
+        });
+        
+        // Close menu when a link is clicked
+        mobileMenu.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('active');
+            });
+        });
+    }
+    
+    setupScrollToTop() {
+        const backToTopBtn = document.getElementById('backToTop');
+        
+        backToTopBtn.addEventListener('click', () => {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+        
+        // Show button on scroll
+        window.addEventListener('scroll', () => {
+            if (window.scrollY > 300) {
+                backToTopBtn.style.display = 'flex';
+            } else {
+                backToTopBtn.style.display = 'none';
+            }
+        });
     }
 }
 
-if (backToTop) {
-    backToTop.style.opacity = '0';
-    backToTop.style.visibility = 'hidden';
-    backToTop.style.transition = 'opacity 0.3s, visibility 0.3s';
-
-    window.addEventListener('scroll', () => {
-        if (window.scrollY > 300) {
-            backToTop.style.opacity = '1';
-            backToTop.style.visibility = 'visible';
-        } else {
-            backToTop.style.opacity = '0';
-            backToTop.style.visibility = 'hidden';
-        }
-    });
-
-    backToTop.addEventListener('click', () => {
-        window.scrollTo({top: 0, behavior: 'smooth'});
-    });
-}
-
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        if (authPopup.style.display === 'flex') {
-            authPopup.style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-        mobileMenu.classList.remove('active');
-    }
-});
-
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    const user = localStorage.getItem('user');
-    if (user) {
-        isLoggedIn = true;
-        currentUser = user;
-        updateButtonUI();
-    } else {
-        authPopup.style.display = 'flex';
-        loginForm.classList.add('active');
-        signupForm.classList.remove('active');
-        document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-        document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-        document.body.style.overflow = 'hidden';
-    }
+    new RecipeCreator();
 });
