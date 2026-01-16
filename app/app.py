@@ -136,7 +136,7 @@ def get_my_recipes(current_user_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     sql = """
-          SELECT r.id, r.title, r.description, r.kcal, r.protein, r.fat, r.image_url, r.meal_type
+          SELECT r.id, r.title, r.description, r.kcal, r.protein, r.fat, r.image_url, r.meal_type, r.is_vegetarian, r.is_vegan, r.is_posno, r.is_halal
           FROM recipes r
                    JOIN saved_recipes sr ON r.id = sr.recipe_id
           WHERE sr.user_id = %s
@@ -226,7 +226,7 @@ def add_recipe(current_user_id):
 def get_all_recipes():
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
-    cursor.execute("SELECT * FROM recipes ORDER BY created_at DESC")
+    cursor.execute("SELECT *, is_vegetarian, is_vegan, is_posno, is_halal FROM recipes ORDER BY created_at DESC")
     recipes = cursor.fetchall()
     conn.close()
     for recipe in recipes:
@@ -306,7 +306,7 @@ def search_recipes():
     meal_type = request.args.get('meal_type')
     max_calories = request.args.get('max_calories')
 
-    sql = "SELECT DISTINCT r.* FROM recipes r"
+    sql = "SELECT DISTINCT r.*, r.is_vegetarian, r.is_vegan, r.is_posno, r.is_halal FROM recipes r"
     params = []
     conditions = []
 
