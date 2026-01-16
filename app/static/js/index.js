@@ -270,24 +270,35 @@ document.addEventListener('click', (e) => {
 });
 
 // Auth Popup
-prijaviSeBtn.addEventListener('click', () => {
-    authPopup.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    loginForm.classList.add('active');
-    signupForm.classList.remove('active');
-    document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-    document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-});
+function setupAuthButtons() {
+    const prijaviSeBtn = document.getElementById('prijaviSeBtn');
+    const prijaviSeMobileBtn = document.getElementById('prijaviSeMobileBtn');
+    
+    if (prijaviSeBtn) {
+        prijaviSeBtn.addEventListener('click', () => {
+            authPopup.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            loginForm.classList.add('active');
+            signupForm.classList.remove('active');
+            document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+            document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+        });
+    }
+    
+    if (prijaviSeMobileBtn) {
+        prijaviSeMobileBtn.addEventListener('click', () => {
+            authPopup.style.display = 'flex';
+            mobileMenu.classList.remove('active');
+            document.body.style.overflow = 'hidden';
+            loginForm.classList.add('active');
+            signupForm.classList.remove('active');
+            document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+            document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+        });
+    }
+}
 
-prijaviSeMobileBtn.addEventListener('click', () => {
-    authPopup.style.display = 'flex';
-    mobileMenu.classList.remove('active');
-    document.body.style.overflow = 'hidden';
-    loginForm.classList.add('active');
-    signupForm.classList.remove('active');
-    document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
-    document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
-});
+setupAuthButtons();
 
 closeAuth.addEventListener('click', () => {
     authPopup.style.display = 'none';
@@ -387,10 +398,12 @@ loginForm.addEventListener('submit', async (e) => {
         if (response.ok) {
             console.log('Login successful:', data.message);
             
-            // Store user email in localStorage
-            const email = document.getElementById('loginEmail').value.trim();
+            // Store user email in localStorage and update auth state
             setUserEmail(email);
+            authState.isLoggedIn = true;
+            authState.email = email;
             
+            // Close auth popup
             authPopup.style.display = 'none';
             document.body.style.overflow = 'auto';
             loginForm.reset();
@@ -400,8 +413,11 @@ loginForm.addEventListener('submit', async (e) => {
             // Update navbar
             updateNavbarAuth();
             
+            // Re-setup button listeners since buttons have changed
+            setupAuthButtons();
+            
             // Show success message
-            alert(data.message);
+            showCustomAlert('Uspešno ste se prijavljeni!', 'Prijava');
         } else {
             showError('loginPasswordError', data.message || 'Greška pri prijavi');
             submitBtn.textContent = 'Prijavi se';

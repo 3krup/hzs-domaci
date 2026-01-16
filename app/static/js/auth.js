@@ -110,20 +110,22 @@ function updateNavbarAuth() {
         const prijaviSeBtn = document.getElementById('prijaviSeBtn');
         const prijaviSeMobileBtn = document.getElementById('prijaviSeMobileBtn');
         
-        if (prijaviSeBtn) {
-            prijaviSeBtn.innerHTML = email;
+        if (prijaviSeBtn && prijaviSeBtn.className !== 'btn-email') {
+            prijaviSeBtn.textContent = email;
             prijaviSeBtn.className = 'btn-email';
-            prijaviSeBtn.id = 'emailBtn';
             prijaviSeBtn.onclick = null;
-            prijaviSeBtn.addEventListener('click', openLogoutPopup);
+            prijaviSeBtn.removeEventListener('click', prijaviSeBtn._clickHandler);
+            prijaviSeBtn._clickHandler = openLogoutPopup;
+            prijaviSeBtn.addEventListener('click', prijaviSeBtn._clickHandler);
         }
         
-        if (prijaviSeMobileBtn) {
-            prijaviSeMobileBtn.innerHTML = email;
+        if (prijaviSeMobileBtn && prijaviSeMobileBtn.className !== 'btn-email') {
+            prijaviSeMobileBtn.textContent = email;
             prijaviSeMobileBtn.className = 'btn-email';
-            prijaviSeMobileBtn.id = 'emailBtnMobile';
             prijaviSeMobileBtn.onclick = null;
-            prijaviSeMobileBtn.addEventListener('click', openLogoutPopup);
+            prijaviSeMobileBtn.removeEventListener('click', prijaviSeMobileBtn._clickHandler);
+            prijaviSeMobileBtn._clickHandler = openLogoutPopup;
+            prijaviSeMobileBtn.addEventListener('click', prijaviSeMobileBtn._clickHandler);
         }
     }
 }
@@ -173,24 +175,46 @@ async function performLogout() {
         
         clearUserData();
         
-        // Reset navbar
-        const emailBtn = document.getElementById('emailBtn') || document.getElementById('emailBtnMobile');
-        if (emailBtn) {
-            emailBtn.innerHTML = 'Prijavi Se';
-            emailBtn.id = 'prijaviSeBtn';
-            emailBtn.className = 'btn-prijava';
-            emailBtn.onclick = null;
+        // Close any open logout popup
+        const logoutPopup = document.querySelector('.logout-popup-overlay');
+        if (logoutPopup) {
+            logoutPopup.remove();
         }
         
-        alert('Uspešno ste se odjavili!');
+        // Reset both navbar buttons to login state
+        const prijaviSeBtn = document.getElementById('prijaviSeBtn');
+        const prijaviSeMobileBtn = document.getElementById('prijaviSeMobileBtn');
         
-        // Redirect or reload
+        if (prijaviSeBtn) {
+            prijaviSeBtn.textContent = 'Prijavi Se';
+            prijaviSeBtn.className = 'btn-prijava';
+            prijaviSeBtn.removeEventListener('click', prijaviSeBtn._clickHandler);
+            prijaviSeBtn._clickHandler = null;
+        }
+        
+        if (prijaviSeMobileBtn) {
+            prijaviSeMobileBtn.textContent = 'Prijavi Se';
+            prijaviSeMobileBtn.className = 'btn-prijava';
+            prijaviSeMobileBtn.removeEventListener('click', prijaviSeMobileBtn._clickHandler);
+            prijaviSeMobileBtn._clickHandler = null;
+        }
+        
+        // Re-setup button listeners for login
+        if (window.setupAuthButtons) {
+            setupAuthButtons();
+        }
+        
+        showCustomAlert('Uspešno ste se odjavili!', 'Odjava');
+        
+        // Redirect if on protected page
         if (window.location.pathname.includes('kreiranje')) {
-            window.location.href = 'index.html';
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 1500);
         }
     } catch (error) {
         console.error('Logout error:', error);
-        alert('Greška pri odjavi');
+        showCustomAlert('Greška pri odjavi', 'Greška');
     }
 }
 

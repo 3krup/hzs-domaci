@@ -16,6 +16,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('User logged in - initializing auth');
     // Initialize auth UI
     await initializeAuth();
+    setupAuthButtons();
     
     // Initialize recipe creator
     console.log('Initializing recipe creator');

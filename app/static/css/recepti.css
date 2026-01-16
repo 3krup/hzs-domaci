@@ -902,3 +902,108 @@ h1, h2, h3, h4 {
         gap: 20px;
     }
 }
+/* Email Button & Logout Popup */
+.btn-email {
+    background-color: transparent;
+    border: none;
+    color: var(--text-dark);
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: var(--transition);
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.btn-email:hover {
+    background-color: var(--background-light);
+}
+
+.logout-popup-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.logout-popup {
+    background-color: var(--white);
+    border-radius: var(--border-radius);
+    padding: 30px;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    animation: popupSlideUp 0.3s ease;
+}
+
+@keyframes popupSlideUp {
+    from { 
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to { 
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.logout-popup h2 {
+    font-size: 1.5rem;
+    margin-bottom: 15px;
+    color: var(--text-dark);
+}
+
+.logout-popup p {
+    color: var(--text-light);
+    margin-bottom: 25px;
+    font-size: 0.95rem;
+}
+
+.logout-popup-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.btn-cancel, .btn-logout {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.btn-cancel {
+    background-color: var(--background-light);
+    color: var(--text-dark);
+}
+
+.btn-cancel:hover {
+    background-color: #e0e0e0;
+}
+
+.btn-logout {
+    background-color: #f44336;
+    color: var(--white);
+}
+
+.btn-logout:hover {
+    background-color: #d32f2f;
+}
