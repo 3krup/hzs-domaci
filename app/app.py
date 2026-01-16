@@ -136,7 +136,7 @@ def get_my_recipes(current_user_id):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
     sql = """
-          SELECT r.id, r.title, r.description, r.kcal, r.protein, r.fat, r.image_url, r.meal_type, r.is_vegetarian, r.is_vegan, r.is_posno, r.is_halal
+          SELECT r.id, r.title, r.description, r.kcal, r.protein, r.fat, r.image_url, r.meal_type
           FROM recipes r
                    JOIN saved_recipes sr ON r.id = sr.recipe_id
           WHERE sr.user_id = %s
@@ -216,14 +216,8 @@ def add_recipe(current_user_id):
                         cursor.execute("INSERT INTO recipe_ingredients (recipe_id, ingredient_id) VALUES (%s, %s)", (new_recipe_id, ing_id))
                     except mysql.connector.IntegrityError: pass
 
-            # Auto-save (favorite) the recipe the user just created
-            try:
-                cursor.execute("INSERT INTO saved_recipes (user_id, recipe_id) VALUES (%s, %s)", (current_user_id, new_recipe_id))
-            except mysql.connector.IntegrityError:
-                pass
-
             conn.commit()
-            return jsonify({'message': 'Recept uspešno dodat!', 'recipe_id': new_recipe_id}), 201
+            return jsonify({'message': 'Recept uspešno dodat!'}), 201
         except MySQLError as e:
             return jsonify({'message': f'Greška u bazi: {e}'}), 500
         finally:
@@ -242,6 +236,7 @@ def get_all_recipes():
             recipe['image_url'] = request.url_root + 'static/uploads/' + recipe['image_url']
     return jsonify(recipes)
 
+<<<<<<< Updated upstream
 @app.route('/recipes/latest', methods=['GET'])
 def get_latest_recipes():
     limit = request.args.get('limit', 3, type=int)
@@ -298,6 +293,8 @@ def get_recipe(recipe_id):
     return jsonify(recipe)
 
 
+=======
+>>>>>>> Stashed changes
 @app.route('/recipes/<int:recipe_id>', methods=['DELETE'])
 @token_required
 def delete_recipe(current_user_id, recipe_id):
@@ -446,7 +443,8 @@ def get_saved_recipes(current_user_id):
     cursor = conn.cursor(dictionary=True)
 
     sql = """
-          SELECT r.*, r.is_vegetarian, r.is_vegan, r.is_posno, r.is_halal
+          SELECT r.id, r.title, r.description, r.preparation_steps, r.difficulty, r.kcal, r.protein, r.fat,
+                 r.image_url, r.meal_type, r.is_vegetarian, r.is_vegan, r.is_posno, r.is_halal
           FROM recipes r
                    JOIN saved_recipes sr ON r.id = sr.recipe_id
           WHERE sr.user_id = %s
@@ -545,7 +543,6 @@ def get_created_recipes(current_user_id):
         return jsonify({'message': f'Database error: {e}'}), 500
     finally:
         conn.close()
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=config.DEBUG)
