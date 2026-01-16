@@ -115,24 +115,38 @@ function createDatabaseRecipeCard(recipe) {
     const imageUrl = normalizeImageUrl(recipe.image_url);
     
     card.innerHTML = `
-        <div class="recipe-image-container">
-            <img src="${imageUrl}" alt="${recipe.title}" class="recipe-image">
+        <div class="recipe-image">
+            <img src="${imageUrl}" alt="${recipe.title}">
             <button class="favorite-btn" data-recipe="${recipe.id}">
                 <i class="far fa-heart"></i>
             </button>
         </div>
         <div class="recipe-info">
+            <div class="recipe-tags">
+                <span class="tag tag-meal">${mealTypeLabel}</span>
+                <span class="tag tag-diet">${dietLabel}</span>
+            </div>
             <h3>${recipe.title}</h3>
             <div class="recipe-stats">
-                <span class="stat"><i class="fas fa-clock"></i> ${recipe.prep_time_minutes || 0} min</span>
-                <span class="stat"><i class="fas fa-fire"></i> ${recipe.kcal || 0} kcal</span>
-                <span class="stat"><i class="fas fa-utensils"></i> ${mealTypeLabel}</span>
+                <div class="stat">
+                    <span class="value">${recipe.kcal || 0}</span>
+                    <span class="label">kcal</span>
+                </div>
+                <div class="stat">
+                    <span class="value">${recipe.protein || 0}g</span>
+                    <span class="label">protein</span>
+                </div>
+                <div class="stat">
+                    <span class="value">${recipe.fat || 0}g</span>
+                    <span class="label">masti</span>
+                </div>
+                ${recipe.prep_time_minutes ? `<div class="stat">
+                    <span class="value">${recipe.prep_time_minutes}</span>
+                    <span class="label">min</span>
+                </div>` : ''}
             </div>
-            <div class="recipe-tags">
-                <span class="tag">${difficultyLabel}</span>
-                <span class="tag">${dietLabel}</span>
-            </div>
-            <button class="btn-recipe-details">Detalji</button>
+            <p class="difficulty"><i class="fas fa-signal"></i> Slozenost: ${difficultyLabel}</p>
+            <button class="btn-recipe-details">Detaljnije</button>
         </div>
     `;
     
@@ -219,7 +233,7 @@ async function applyFilters() {
     // If showing favorites only
     if (activeFilters['showFavoritesOnly']) {
         try {
-            const response = await fetch(`${API_BASE_URL}/my-recipes`, {
+            const response = await fetch(`${API_BASE_URL}/saved-recipes`, {
                 method: 'GET',
                 credentials: 'include'
             });
@@ -596,79 +610,6 @@ clearFiltersBtn.addEventListener('click', () => {
     
     console.log('Filters cleared');
     applyFilters();
-});
-
-// Open Recipe Popup
-recipeCards.forEach(card => {
-    card.addEventListener('click', (e) => {
-        if (e.target.classList.contains('btn-recipe-details')) {
-            const recipeId = card.dataset.recipe;
-            
-            // Get recipe from hardcoded recipes object
-            const recipe = recipes[recipeId];
-            
-            if (recipe) {
-                // Handle image path - add ../ prefix for hardcoded recipes
-                let imageSrc = recipe.image;
-                if (!imageSrc.startsWith('http') && !imageSrc.startsWith('/') && !imageSrc.startsWith('../')) {
-                    imageSrc = '../' + imageSrc;
-                }
-                
-                document.getElementById('popupImage').src = imageSrc;
-                document.getElementById('popupImage').alt = recipe.title;
-                document.getElementById('popupTitle').textContent = recipe.title;
-                
-                // Set stats
-                const popupStats = document.getElementById('popupStats');
-                const kcal = recipe.nutrition['Kcal'] || recipe.calories;
-                const protein = recipe.nutrition['Protein'] || recipe.protein;
-                const fats = recipe.nutrition['Masti'] || recipe.fats;
-                
-                popupStats.innerHTML = `
-                    <div style="display: flex; gap: 20px;">
-                        <div>
-                            <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${kcal}</span>
-                            <span style="color: #666; margin-left: 5px;">kcal</span>
-                        </div>
-                        <div>
-                            <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${protein}</span>
-                            <span style="color: #666; margin-left: 5px;">protein</span>
-                        </div>
-                        <div>
-                            <span style="font-size: 1.2rem; font-weight: bold; color: #578B62;">${fats}</span>
-                            <span style="color: #666; margin-left: 5px;">masti</span>
-                        </div>
-                    </div>
-                `;
-                
-                // Set ingredients
-                const ingredientsList = document.getElementById('ingredientsList');
-                ingredientsList.innerHTML = recipe.ingredients
-                    .map(ingredient => `<li>${ingredient}</li>`)
-                    .join('');
-                
-                // Set instructions
-                const instructionsList = document.getElementById('instructionsList');
-                instructionsList.innerHTML = recipe.instructions
-                    .map((step, index) => `<li>${step}</li>`)
-                    .join('');
-                
-                // Set nutrition
-                const nutritionGrid = document.getElementById('nutritionGrid');
-                nutritionGrid.innerHTML = Object.entries(recipe.nutrition)
-                    .map(([key, value]) => `
-                        <div class="nutrition-item">
-                            <span class="label">${key}</span>
-                            <span class="value">${value}</span>
-                        </div>
-                    `)
-                    .join('');
-                
-                recipePopup.style.display = 'flex';
-                document.body.style.overflow = 'hidden';
-            }
-        }
-    });
 });
 
 // Close Recipe Popup
