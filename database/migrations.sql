@@ -82,6 +82,11 @@ CREATE TABLE saved_recipes (
 
 ALTER TABLE recipes ADD COLUMN meal_type VARCHAR(20) DEFAULT NULL;
 
+
+ALTER TABLE recipes
+    ADD COLUMN is_vegetarian BOOLEAN DEFAULT FALSE,
+ADD COLUMN is_vegan BOOLEAN DEFAULT FALSE;
+
 -- UNOS TEST PODATAKA (SEED)
 
 -- Unos 2 korisnika (sifre su hashovane, ovde samo primeri)
