@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kreiraj Recept - FitPlate</title>
+    <link rel="stylesheet" href="kreiranje.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Open+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container nav-container">
+            <a href="index.html" class="logo">
+                <img src="static/images/logo 5.png" alt="FitPlate Logo" id="main-logo">
+                <span>FitPlate</span>
+            </a>
+            
+            <!-- Desktop Navigation -->
+            <ul class="nav-menu">
+                <li><a href="index.html">Pocetna</a></li>
+                <li><a href="recepti.html">Recepti</a></li>
+                <li><a href="kreiranje.html" class="active">Kreiraj Sam</a></li>
+                <li><button class="btn-prijava" id="prijaviSeBtn">Prijavi Se</button></li>
+            </ul>
+            
+            <!-- Mobile Menu Button -->
+            <button class="mobile-menu-btn" id="mobileMenuBtn">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <!-- Mobile Navigation -->
+        <div class="mobile-menu" id="mobileMenu">
+            <ul>
+                <li><a href="index.html">Pocetna</a></li>
+                <li><a href="recepti.html">Recepti</a></li>
+                <li><a href="kreiranje.html" class="active">Kreiraj Sam</a></li>
+                <li><button class="btn-prijava" id="prijaviSeMobileBtn">Prijavi Se</button></li>
+            </ul>
+        </div>
+    </nav>
+
+    <!-- Main Section -->
+    <section class="create-recipes">
+        <div class="container">
+            <h1 class="section-title">Moji Recepti</h1>
+            <div class="recipes-grid">
+                <!-- Add Recipe Card -->
+                <div class="recipe-card add-recipe-card" id="addRecipeCard">
+                    <div class="add-recipe-container">
+                        <i class="fas fa-plus"></i>
+                        <p>Dodaj Recept</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-logo">
+                    <img src="static/images/logo 5.png" alt="FitPlate Logo">
+                </div>
+                
+                <div class="footer-info">
+                    <div class="contact-info">
+                        <p><i class="fas fa-map-marker-alt"></i> 69 Šulovača</p>
+                        <p>Loznica, Srbija #15300</p>
+                        <p><i class="fas fa-phone"></i> 069 6969696</p>
+                        <p><i class="fas fa-envelope"></i> contact@fitplate.com</p>
+                    </div>
+                </div>
+                
+                <button class="btn-to-top" id="backToTop">
+                    <i class="fas fa-chevron-up"></i>
+                </button>
+            </div>
+            
+            <div class="footer-bottom">
+                <p>&copy; 2026 FitPlate. All rights reserved</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Create Recipe Popup -->
+    <div class="recipe-popup" id="createRecipePopup">
+        <div class="popup-content">
+            <button class="close-popup" id="closePopup">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="popup-body">
+                <h2>Kreiraj Novi Recept</h2>
+                
+                <form id="createRecipeForm">
+                    <!-- Image Upload -->
+                    <div class="form-group">
+                        <label>Slika Recepta</label>
+                        <div class="image-upload-container">
+                            <input type="file" id="recipeImage" accept="image/*" style="display: none;">
+                            <div class="image-preview" id="imagePreview">
+                                <i class="fas fa-image"></i>
+                                <p>Kliknite za upload slike</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recipe Name -->
+                    <div class="form-group">
+                        <label for="recipeName">Naziv Recepta</label>
+                        <input type="text" id="recipeName" placeholder="Unesite naziv recepta" required>
+                    </div>
+
+                    <!-- Difficulty -->
+                    <div class="form-group">
+                        <label for="difficulty">Slozenost</label>
+                        <select id="difficulty" required>
+                            <option value="">Izaberite slozenost</option>
+                            <option value="lako">Lako</option>
+                            <option value="srednje">Srednje</option>
+                            <option value="tesko">Teško</option>
+                        </select>
+                    </div>
+
+                    <!-- Prep Time -->
+                    <div class="form-group">
+                        <label for="prepTime">Vreme Pripreme (minuta)</label>
+                        <input type="number" id="prepTime" placeholder="Unesite broj minuta" min="1" required>
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="mealType">Tip Obroka</label>
+                            <select id="mealType" required>
+                                <option value="">Izaberite tip obroka</option>
+                                <option value="dorucak">Doručak</option>
+                                <option value="rucak">Ručak</option>
+                                <option value="vecera">Večera</option>
+                                <option value="uzina">Užina</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="dietType">Tip Ishrane</label>
+                            <select id="dietType" required>
+                                <option value="">Izaberite tip ishrane</option>
+                                <option value="sa-mesom">Sa mesom</option>
+                                <option value="posno">Posno</option>
+                                <option value="vegetarijansko">Vegetarijansko</option>
+                                <option value="vegansko">Vegansko</option>
+                                <option value="halal">Halal</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Ingredients -->
+                    <div class="form-group">
+                        <label for="ingredients">Sastojci</label>
+                        <textarea id="ingredients" placeholder="Unesite sastojke (svaki u novom redu)" rows="4" required></textarea>
+                    </div>
+
+                    <!-- Instructions -->
+                    <div class="form-group">
+                        <label for="instructions">Priprema</label>
+                        <textarea id="instructions" placeholder="Unesite korake pripreme (svaki u novom redu)" rows="4" required></textarea>
+                    </div>
+
+                    <!-- Nutrition Facts -->
+                    <div class="form-group">
+                        <label>Nutritivne Vrednosti</label>
+                        <div class="nutrition-mandatory">
+                            <div class="nutrition-field">
+                                <label>Kcal</label>
+                                <input type="number" class="nutrition-input mandatory" data-nutrition="kcal" placeholder="0" min="0" required>
+                            </div>
+                            <div class="nutrition-field">
+                                <label>Protein (g)</label>
+                                <input type="number" class="nutrition-input mandatory" data-nutrition="protein" placeholder="0" min="0" required>
+                            </div>
+                            <div class="nutrition-field">
+                                <label>Masti (g)</label>
+                                <input type="number" class="nutrition-input mandatory" data-nutrition="masti" placeholder="0" min="0" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Additional Nutrition Fields -->
+                    <div class="form-group">
+                        <div class="nutrition-header">
+                            <label>Dodatne Nutritivne Vrednosti</label>
+                            <button type="button" id="addNutritionBtn" class="btn-add-nutrition">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                        </div>
+                        <div id="additionalNutrition"></div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="form-buttons">
+                        <button type="button" class="btn-cancel" id="cancelBtn">Odustani</button>
+                        <button type="submit" class="btn-submit">Sacuvaj</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="kreiranje.js"></script>
+</body>
+</html>
