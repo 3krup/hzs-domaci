@@ -99,7 +99,8 @@ let activeFilters = {
     'tip-obroka': '',
     'tip-ishrane': '',
     'max-calories': null,
-    'search': ''
+    'search': '',
+    'showFavoritesOnly': false
 };
 
 let favorites = [];
@@ -122,8 +123,56 @@ const tipObrokaFilter = document.getElementById('tipObrokaFilter');
 const tipIshraneFilter = document.getElementById('tipIshrane Filter');
 const clearFiltersBtn = document.getElementById('clearFiltersBtn');
 const searchInput = document.getElementById('searchInput');
-const maxCaloriesInput = document.getElementById('maxCaloriesInput');
+const maxMinutasInput = document.getElementById('maxMinutasInput');
+const searchBtn = document.querySelector('.search-btn');
+const favoritesFilterBtn = document.getElementById('favoritesFilterBtn');
 const favoriteButtons = document.querySelectorAll('.favorite-btn');
+
+// Hardcoded recipes for merging with database
+const hardcodedRecipes = {
+    avokado: {
+        id: 'avokado',
+        title: "Avokado Omlet",
+        image_url: "static/images/avkoado.jpg",
+        kcal: 504,
+        protein: 27,
+        fat: 37,
+        meal_type: 'dorucak',
+        difficulty: 'Lako',
+        prep_time_minutes: 15,
+        is_posno: 0,
+        is_halal: 0,
+        description: "Omlet sa avokadom"
+    },
+    piletina: {
+        id: 'piletina',
+        title: "Sesam Piletina",
+        image_url: "static/images/piletina.jpg",
+        kcal: 333,
+        protein: 36.8,
+        fat: 15.2,
+        meal_type: 'rucak',
+        difficulty: 'Srednje',
+        prep_time_minutes: 20,
+        is_posno: 0,
+        is_halal: 1,
+        description: "Piletina sa susamom"
+    },
+    brownie: {
+        id: 'brownie',
+        title: "Protein Brownie",
+        image_url: "static/images/brownie.webp",
+        kcal: 302,
+        protein: 23,
+        fat: 17,
+        meal_type: 'uzina',
+        difficulty: 'Lako',
+        prep_time_minutes: 30,
+        is_posno: 1,
+        is_halal: 0,
+        description: "Čokoladni brownie sa proteinom"
+    }
+};
 
 // Fetch and display all recipes from database
 async function fetchAllRecipes() {
@@ -162,14 +211,21 @@ async function fetchAllRecipes() {
 function createDatabaseRecipeCard(recipe) {
     const mealTypeLabel = getMealTypeLabel(recipe.meal_type);
     const difficultyLabel = getDifficultyLabel(recipe.difficulty);
-    const dietLabel = getDietTypeLabel(recipe.diet_type || recipe.is_halal ? 'halal' : 'posno');
+    
+    // Determine diet type label
+    let dietLabel = 'Ostalo';
+    if (recipe.is_halal) {
+        dietLabel = 'Halal';
+    } else if (recipe.is_posno) {
+        dietLabel = 'Posno';
+    }
     
     const card = document.createElement('div');
     card.className = 'recipe-card';
     card.dataset.recipe = recipe.id;
     card.innerHTML = `
         <div class="recipe-image">
-            <img src="${API_BASE_URL}/uploads/${recipe.image_url}" alt="${recipe.title}">
+            <img src="${recipe.image_url && recipe.image_url.startsWith('http') ? recipe.image_url : API_BASE_URL + '/uploads/' + recipe.image_url}" alt="${recipe.title}">
             <button class="favorite-btn" data-recipe="${recipe.id}">
                 <i class="far fa-heart"></i>
             </button>
@@ -316,26 +372,245 @@ searchInput.addEventListener('input', (e) => {
     applyFilters();
 });
 
-// Max Calories Handler
-maxCaloriesInput.addEventListener('input', (e) => {
-    activeFilters['max-calories'] = e.target.value ? parseInt(e.target.value) : null;
-    console.log('Max calories:', activeFilters['max-calories']);
+// Max Minutes Handler
+maxMinutasInput.addEventListener('input', (e) => {
+    activeFilters['max-minutos'] = e.target.value ? parseInt(e.target.value) : null;
+    console.log('Max minutos:', activeFilters['max-minutos']);
     applyFilters();
 });
 
-// Apply Filters
-function applyFilters() {
-    // TODO: This will be replaced with backend API call
-    // For now, it's ready for backend integration
+// Apply Filters - Call API
+async function applyFilters() {
     console.log('Applying filters:', activeFilters);
-    // In real implementation, send activeFilters to backend
-    // const response = await fetch('/api/recipes/filter', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(activeFilters)
-    // });
-    // const filtered = await response.json();
+    
+    let recipes = [];
+    
+    // If showing favorites only
+    if (activeFilters['showFavoritesOnly']) {
+        try {
+            const response = await fetch(`${API_BASE_URL}/my-recipes`, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                recipes = await response.json();
+                console.log('Fetched favorites:', recipes);
+            }
+        } catch (error) {
+            console.error('Error fetching favorites:', error);
+        }
+    } else {
+        // Build query parameters for search
+        const params = new URLSearchParams();
+        
+        if (activeFilters.search) {
+            params.append('searchName', activeFilters.search);
+        }
+        
+        if (activeFilters['tip-obroka']) {
+            params.append('meal_type', activeFilters['tip-obroka']);
+        }
+        
+        if (activeFilters['tip-ishrane']) {
+            params.append('posno', activeFilters['tip-ishrane'] === 'posno' ? '1' : '0');
+        }
+        
+        if (activeFilters['max-minutos']) {
+            params.append('max_time', activeFilters['max-minutos']);
+        }
+        
+        try {
+            const queryString = params.toString();
+            const url = queryString 
+                ? `${API_BASE_URL}/search?${queryString}`
+                : `${API_BASE_URL}/recipes`;
+            
+            const response = await fetch(url, {
+                method: 'GET',
+                credentials: 'include'
+            });
+            
+            if (response.ok) {
+                recipes = await response.json();
+                console.log('Fetched recipes:', recipes);
+                
+                // Merge hardcoded recipes with database recipes
+                recipes = mergeWithHardcodedRecipes(recipes);
+                
+                // Filter hardcoded recipes based on active filters
+                recipes = filterRecipes(recipes);
+            }
+        } catch (error) {
+            console.error('Error applying filters:', error);
+        }
+    }
+    
+    // Display filtered recipes
+    displayRecipes(recipes);
 }
+
+function mergeWithHardcodedRecipes(databaseRecipes) {
+    // Create a set of database recipe IDs to avoid duplicates
+    const dbIds = new Set(databaseRecipes.map(r => r.id));
+    
+    // Add hardcoded recipes that aren't in database
+    const hardcodedArray = Object.values(hardcodedRecipes);
+    const merged = [...databaseRecipes];
+    
+    hardcodedArray.forEach(recipe => {
+        if (!dbIds.has(recipe.id)) {
+            merged.push(recipe);
+        }
+    });
+    
+    return merged;
+}
+
+function filterRecipes(recipes) {
+    return recipes.filter(recipe => {
+        // Filter by meal type
+        if (activeFilters['tip-obroka'] && recipe.meal_type !== activeFilters['tip-obroka']) {
+            return false;
+        }
+        
+        // Filter by diet type (posno = is_posno)
+        if (activeFilters['tip-ishrane'] === 'posno' && !recipe.is_posno) {
+            return false;
+        }
+        
+        // Filter by max time
+        if (activeFilters['max-minutos']) {
+            const prepTime = recipe.prep_time_minutes || 0;
+            if (prepTime > activeFilters['max-minutos']) {
+                return false;
+            }
+        }
+        
+        // Filter by search name
+        if (activeFilters.search) {
+            const searchLower = activeFilters.search.toLowerCase();
+            if (!recipe.title.toLowerCase().includes(searchLower)) {
+                return false;
+            }
+        }
+        
+        return true;
+    });
+}
+
+function displayRecipes(recipes) {
+    const recipesGrid = document.querySelector('.recipes-grid');
+    recipesGrid.innerHTML = '';
+    
+    if (recipes.length === 0) {
+        recipesGrid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: #666; padding: 40px;">Nema recepata koji odgovaraju vašim filterima.</p>';
+        return;
+    }
+    
+    recipes.forEach(recipe => {
+        const recipeCard = createDatabaseRecipeCard(recipe);
+        recipesGrid.appendChild(recipeCard);
+    });
+    
+    // Re-attach favorite button listeners
+    attachFavoriteButtonListeners();
+    updateFavoriteButtons();
+}
+
+function attachFavoriteButtonListeners() {
+    const favoriteButtons = document.querySelectorAll('.favorite-btn');
+    
+    favoriteButtons.forEach(btn => {
+        btn.removeEventListener('click', handleFavoriteClick);
+        btn.addEventListener('click', handleFavoriteClick);
+    });
+}
+
+function handleFavoriteClick(e) {
+    e.stopPropagation();
+    
+    // Check if user is logged in
+    if (!authState.isLoggedIn) {
+        authPopup.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        loginForm.classList.add('active');
+        signupForm.classList.remove('active');
+        document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+        document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+        return;
+    }
+    
+    const recipeId = this.dataset.recipe;
+    const isCurrentlyFavorite = favorites.includes(recipeId);
+    
+    // Save to backend
+    const method = isCurrentlyFavorite ? 'DELETE' : 'POST';
+    
+    fetch(`${API_BASE_URL}/recipes/${recipeId}/save`, {
+        method: method,
+        credentials: 'include'
+    })
+    .then(response => {
+        if (response.ok) {
+            // Update local favorites
+            if (isCurrentlyFavorite) {
+                favorites = favorites.filter(id => id !== recipeId);
+            } else {
+                favorites.push(recipeId);
+            }
+            
+            saveFavorites();
+            updateFavoriteButtons();
+            console.log('Favorite toggled for:', recipeId, 'Favorites:', favorites);
+        } else {
+            console.error('Failed to save favorite');
+        }
+    })
+    .catch(error => {
+        console.error('Error saving favorite:', error);
+    });
+}
+
+// Search Button Click
+searchBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    applyFilters();
+});
+
+// Favorites Filter Button Click
+favoritesFilterBtn.addEventListener('click', async (e) => {
+    e.preventDefault();
+    
+    if (!authState.isLoggedIn) {
+        authPopup.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        loginForm.classList.add('active');
+        signupForm.classList.remove('active');
+        document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+        document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+        return;
+    }
+    
+    // Toggle favorites filter
+    activeFilters['showFavoritesOnly'] = !activeFilters['showFavoritesOnly'];
+    
+    // Clear other filters when showing favorites
+    if (activeFilters['showFavoritesOnly']) {
+        activeFilters['tip-obroka'] = '';
+        activeFilters['tip-ishrane'] = '';
+        activeFilters['max-minutos'] = null;
+        activeFilters['search'] = '';
+        
+        tipObrokaFilter.value = '';
+        tipIshraneFilter.value = '';
+        maxMinutasInput.value = '';
+        searchInput.value = '';
+    }
+    
+    favoritesFilterBtn.classList.toggle('active');
+    await applyFilters();
+});
 
 // Clear Filters
 clearFiltersBtn.addEventListener('click', () => {
@@ -344,14 +619,16 @@ clearFiltersBtn.addEventListener('click', () => {
         'tip-obroka': '',
         'tip-ishrane': '',
         'max-calories': null,
-        'search': ''
+        'search': '',
+        'showFavoritesOnly': false
     };
     
     // Reset UI
     tipObrokaFilter.value = '';
     tipIshraneFilter.value = '';
     searchInput.value = '';
-    maxCaloriesInput.value = '';
+    maxMinutasInput.value = '';
+    favoritesFilterBtn.classList.remove('active');
     
     console.log('Filters cleared');
     applyFilters();

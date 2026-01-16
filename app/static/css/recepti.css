@@ -241,7 +241,8 @@ h1, h2, h3, h4 {
     border-color: var(--white);
 }
 
-.calories-input {
+.calories-input,
+.minutes-input {
     background-color: rgba(255, 255, 255, 0.2);
     color: var(--white);
     border: 2px solid transparent;
@@ -252,11 +253,13 @@ h1, h2, h3, h4 {
     transition: var(--transition);
 }
 
-.calories-input::placeholder {
+.calories-input::placeholder,
+.minutes-input::placeholder {
     color: rgba(255, 255, 255, 0.6);
 }
 
-.calories-input:focus {
+.calories-input:focus,
+.minutes-input:focus {
     outline: none;
     background-color: rgba(255, 255, 255, 0.3);
     border-color: var(--white);
@@ -264,15 +267,42 @@ h1, h2, h3, h4 {
 
 /* Remove number spinner arrows */
 .calories-input::-webkit-outer-spin-button,
-.calories-input::-webkit-inner-spin-button {
+.calories-input::-webkit-inner-spin-button,
+.minutes-input::-webkit-outer-spin-button,
+.minutes-input::-webkit-inner-spin-button {
     -webkit-appearance: none;
     appearance: none;
     margin: 0;
 }
 
-.calories-input[type=number] {
+.calories-input[type=number],
+.minutes-input[type=number] {
     -moz-appearance: textfield;
     appearance: textfield;
+}
+
+.favorites-filter-btn {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    border: 2px solid transparent;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.favorites-filter-btn:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+    border-color: var(--white);
+}
+
+.favorites-filter-btn.active {
+    background-color: #e74c3c;
+    border-color: #c0392b;
 }
 
 .clear-filters-btn {
@@ -811,7 +841,8 @@ h1, h2, h3, h4 {
         justify-content: flex-start;
     }
     
-    .calories-input {
+    .calories-input,
+    .minutes-input {
         width: 100%;
     }
     
