@@ -1,3 +1,5 @@
+const API_URL = 'http://127.0.0.1:5000';
+
 // Recipe Data
 const recipes = {
     avokado: {
@@ -103,8 +105,9 @@ const recipes = {
     }
 };
 
-// Favorites state
 let favorites = [];
+let isLoggedIn = false;
+let currentUser = null;
 
 // DOM Elements
 const recipePopup = document.getElementById('recipePopup');
@@ -122,7 +125,6 @@ const loginForm = document.getElementById('loginForm');
 const signupForm = document.getElementById('signupForm');
 const favoriteButtons = document.querySelectorAll('.favorite-btn');
 
-// Load favorites from localStorage
 function loadFavorites() {
     const stored = localStorage.getItem('favorites');
     if (stored) {
@@ -131,12 +133,10 @@ function loadFavorites() {
     }
 }
 
-// Save favorites to localStorage
 function saveFavorites() {
     localStorage.setItem('favorites', JSON.stringify(favorites));
 }
 
-// Update favorite button UI
 function updateFavoriteButtons() {
     favoriteButtons.forEach(btn => {
         const recipeId = btn.dataset.recipe;
@@ -150,10 +150,20 @@ function updateFavoriteButtons() {
     });
 }
 
-// Favorite Button Handler
 favoriteButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        
+        if (!isLoggedIn) {
+            authPopup.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            loginForm.classList.add('active');
+            signupForm.classList.remove('active');
+            document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+            document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+            return;
+        }
+        
         const recipeId = btn.dataset.recipe;
         
         if (favorites.includes(recipeId)) {
@@ -164,11 +174,10 @@ favoriteButtons.forEach(btn => {
         
         saveFavorites();
         updateFavoriteButtons();
-        console.log('Favorite toggled for:', recipeId, 'Favorites:', favorites);
     });
 });
 
-// Open Recipe Popup
+// Recipe Popup
 recipeCards.forEach(card => {
     card.addEventListener('click', (e) => {
         if (e.target.classList.contains('btn-recipe-details')) {
@@ -180,7 +189,6 @@ recipeCards.forEach(card => {
                 document.getElementById('popupImage').alt = recipe.title;
                 document.getElementById('popupTitle').textContent = recipe.title;
                 
-                // Set stats
                 const popupStats = document.getElementById('popupStats');
                 popupStats.innerHTML = `
                     <div style="display: flex; gap: 20px;">
@@ -199,19 +207,16 @@ recipeCards.forEach(card => {
                     </div>
                 `;
                 
-                // Set ingredients
                 const ingredientsList = document.getElementById('ingredientsList');
                 ingredientsList.innerHTML = recipe.ingredients
                     .map(ingredient => `<li>${ingredient}</li>`)
                     .join('');
                 
-                // Set instructions
                 const instructionsList = document.getElementById('instructionsList');
                 instructionsList.innerHTML = recipe.instructions
                     .map((step, index) => `<li>${step}</li>`)
                     .join('');
                 
-                // Set nutrition
                 const nutritionGrid = document.getElementById('nutritionGrid');
                 nutritionGrid.innerHTML = Object.entries(recipe.nutrition)
                     .map(([key, value]) => `
@@ -229,7 +234,6 @@ recipeCards.forEach(card => {
     });
 });
 
-// Close Recipe Popup
 closePopup.addEventListener('click', () => {
     recipePopup.style.display = 'none';
     document.body.style.overflow = 'auto';
@@ -250,19 +254,18 @@ backToTop.addEventListener('click', () => {
     });
 });
 
-// Mobile Menu Toggle
+// Mobile Menu
 mobileMenuBtn.addEventListener('click', () => {
     mobileMenu.classList.toggle('active');
 });
 
-// Close mobile menu when clicking outside
 document.addEventListener('click', (e) => {
     if (!mobileMenu.contains(e.target) && !mobileMenuBtn.contains(e.target)) {
         mobileMenu.classList.remove('active');
     }
 });
 
-// Auth Popup
+// AUTH HANDLERS
 prijaviSeBtn.addEventListener('click', () => {
     authPopup.style.display = 'flex';
     document.body.style.overflow = 'hidden';
@@ -294,11 +297,9 @@ authPopup.addEventListener('click', (e) => {
     }
 });
 
-// Auth Tabs
 authTabs.forEach(tab => {
     tab.addEventListener('click', () => {
         const tabName = tab.dataset.tab;
-        
         authTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         
@@ -313,105 +314,121 @@ authTabs.forEach(tab => {
     });
 });
 
-// Form Validation
-loginForm.addEventListener('submit', (e) => {
+// LOGIN
+loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
-    let isValid = true;
     
-    // Clear previous errors
     document.getElementById('loginEmailError').textContent = '';
     document.getElementById('loginPasswordError').textContent = '';
     
-    // Email validation
     if (!email) {
         document.getElementById('loginEmailError').textContent = 'Email je obavezan';
-        isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        document.getElementById('loginEmailError').textContent = 'Unesite validan email';
-        isValid = false;
+        return;
     }
-    
-    // Password validation
     if (!password) {
         document.getElementById('loginPasswordError').textContent = 'Lozinka je obavezna';
-        isValid = false;
+        return;
     }
     
-    if (isValid) {
-        // Simulate API call
-        console.log('Login data:', { email, password });
-        alert('Uspešna prijava! (simulacija)');
-        authPopup.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        loginForm.reset();
+    try {
+        const response = await fetch(`${API_URL}/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            isLoggedIn = true;
+            currentUser = email;
+            localStorage.setItem('user', email);
+            authPopup.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            loginForm.reset();
+            updateButtonUI();
+            alert('Uspešna prijava!');
+        } else {
+            document.getElementById('loginEmailError').textContent = data.message || 'Greška pri prijavi';
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        document.getElementById('loginEmailError').textContent = 'Greška pri povezivanju sa serverom';
     }
 });
 
-signupForm.addEventListener('submit', (e) => {
+// SIGNUP
+signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     
-    const name = document.getElementById('signupName').value.trim();
     const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value.trim();
-    const confirmPassword = document.getElementById('signupConfirmPassword').value.trim();
-    let isValid = true;
     
-    // Clear previous errors
-    document.getElementById('signupNameError').textContent = '';
     document.getElementById('signupEmailError').textContent = '';
     document.getElementById('signupPasswordError').textContent = '';
-    document.getElementById('signupConfirmError').textContent = '';
     
-    // Name validation
-    if (!name) {
-        document.getElementById('signupNameError').textContent = 'Ime je obavezno';
-        isValid = false;
-    } else if (name.length < 2) {
-        document.getElementById('signupNameError').textContent = 'Ime mora imati najmanje 2 karaktera';
-        isValid = false;
-    }
-    
-    // Email validation
     if (!email) {
         document.getElementById('signupEmailError').textContent = 'Email je obavezan';
-        isValid = false;
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        document.getElementById('signupEmailError').textContent = 'Unesite validan email';
-        isValid = false;
+        return;
     }
-    
-    // Password validation
-    if (!password) {
-        document.getElementById('signupPasswordError').textContent = 'Lozinka je obavezna';
-        isValid = false;
-    } else if (password.length < 6) {
+    if (!password || password.length < 6) {
         document.getElementById('signupPasswordError').textContent = 'Lozinka mora imati najmanje 6 karaktera';
-        isValid = false;
+        return;
     }
     
-    // Confirm password validation
-    if (!confirmPassword) {
-        document.getElementById('signupConfirmError').textContent = 'Potvrdite lozinku';
-        isValid = false;
-    } else if (password !== confirmPassword) {
-        document.getElementById('signupConfirmError').textContent = 'Lozinke se ne poklapaju';
-        isValid = false;
-    }
-    
-    if (isValid) {
-        // Simulate API call
-        console.log('Signup data:', { name, email, password });
-        alert('Uspešna registracija! (simulacija)');
-        authPopup.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        signupForm.reset();
+    try {
+        const response = await fetch(`${API_URL}/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.status === 201) {
+            isLoggedIn = true;
+            currentUser = email;
+            localStorage.setItem('user', email);
+            authPopup.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            signupForm.reset();
+            updateButtonUI();
+            alert('Uspešna registracija!');
+        } else {
+            document.getElementById('signupEmailError').textContent = data.message || 'Greška pri registraciji';
+        }
+    } catch (error) {
+        console.error('Signup error:', error);
+        document.getElementById('signupEmailError').textContent = 'Greška pri povezivanju sa serverom';
     }
 });
 
-// Show back to top button on scroll
+function updateButtonUI() {
+    if (isLoggedIn && currentUser) {
+        prijaviSeBtn.textContent = currentUser;
+        prijaviSeBtn.style.color = '#4CAF50';
+        prijaviSeMobileBtn.textContent = currentUser;
+    } else {
+        prijaviSeBtn.textContent = 'Prijavi Se';
+        prijaviSeBtn.style.color = 'inherit';
+        prijaviSeMobileBtn.textContent = 'Prijavi Se';
+    }
+}
+
+// Back to top button
+backToTop.style.opacity = '0';
+backToTop.style.visibility = 'hidden';
+backToTop.style.transition = 'opacity 0.3s, visibility 0.3s';
+
 window.addEventListener('scroll', () => {
     if (window.scrollY > 300) {
         backToTop.style.opacity = '1';
@@ -422,12 +439,7 @@ window.addEventListener('scroll', () => {
     }
 });
 
-// Initialize back to top button
-backToTop.style.opacity = '0';
-backToTop.style.visibility = 'hidden';
-backToTop.style.transition = 'opacity 0.3s, visibility 0.3s';
-
-// Close popups with Escape key
+// Close popups with Escape
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
         if (recipePopup.style.display === 'flex') {
@@ -445,4 +457,10 @@ document.addEventListener('keydown', (e) => {
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     loadFavorites();
+    const user = localStorage.getItem('user');
+    if (user) {
+        isLoggedIn = true;
+        currentUser = user;
+        updateButtonUI();
+    }
 });
