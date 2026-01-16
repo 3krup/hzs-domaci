@@ -44,7 +44,7 @@ let authState = {
 // Check if user is logged in
 async function checkAuthStatus() {
     try {
-        const response = await fetch(`${API_BASE_URL}/my-recipes`, {
+        const response = await fetch(`${API_BASE_URL}/saved-recipes`, {
             method: 'GET',
             credentials: 'include'
         });
@@ -228,9 +228,9 @@ async function initializeAuth() {
     const isLoggedIn = await checkAuthStatus();
     if (isLoggedIn) {
         const email = getUserEmail();
+        authState.isLoggedIn = true;
+        authState.email = email;
         if (email) {
-            authState.isLoggedIn = true;
-            authState.email = email;
             updateNavbarAuth();
         }
     }

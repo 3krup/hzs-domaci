@@ -134,6 +134,9 @@ function handleCreatedRecipeDetailsClick(e) {
     fetch(`${API_BASE_URL}/recipes/${recipeId}`)
         .then(response => response.json())
         .then(recipe => {
+            if (recipe.image_url) {
+                document.getElementById('popupImage').src = normalizeImageUrl(recipe.image_url);
+            }
             // Update description
             document.getElementById('popupDescription').textContent = recipe.description || 'Nema dostupnog opisa';
             
@@ -194,13 +197,14 @@ function createRecipeCard(recipe) {
     const mealTypeLabel = getMealTypeLabel(recipe.meal_type);
     const difficultyLabel = getDifficultyLabel(recipe.difficulty);
     const dietLabel = getDietTypeLabel(recipe);
+    const imageSrc = normalizeImageUrl(recipe.image_url);
     
     const card = document.createElement('div');
     card.className = 'recipe-card';
     card.dataset.recipe = recipe.id;
     card.innerHTML = `
         <div class="recipe-image">
-            <img src="${API_BASE_URL}/uploads/${recipe.image_url}" alt="${recipe.title}">
+            <img src="${imageSrc}" alt="${recipe.title}">
             <button class="favorite-btn" data-recipe="${recipe.id}">
                 <i class="far fa-heart"></i>
             </button>
@@ -257,12 +261,24 @@ function getDifficultyLabel(difficulty) {
 }
 
 function getDietTypeLabel(recipe) {
+    const isTrue = (value) => value === true || value === 1 || value === '1';
     // Handle boolean diet fields from database
-    if (recipe.is_vegan) return 'Vegansko';
-    if (recipe.is_vegetarian) return 'Vegetarijansko';
-    if (recipe.is_posno) return 'Posno';
-    if (recipe.is_halal) return 'Halal';
+    if (isTrue(recipe.is_posno)) return 'Posno';
+    if (isTrue(recipe.is_halal)) return 'Halal';
     return 'Ostalo';
+}
+
+function normalizeImageUrl(imageUrl) {
+    if (!imageUrl) {
+        return '../static/images/logo 5.png';
+    }
+    if (imageUrl.startsWith('http')) {
+        return imageUrl;
+    }
+    if (imageUrl.startsWith('/static/') || imageUrl.startsWith('static/')) {
+        return `${API_BASE_URL}/${imageUrl.replace(/^\//, '')}`;
+    }
+    return `${API_BASE_URL}/static/uploads/${imageUrl}`;
 }
 
 // Recipe Creation Form Handler
@@ -459,8 +475,7 @@ class RecipeCreator {
         // Convert diet type to boolean fields
         formData.append('is_posno', this.recipeData.dietType === 'posno' ? 1 : 0);
         formData.append('is_halal', this.recipeData.dietType === 'halal' ? 1 : 0);
-        formData.append('is_vegetarian', this.recipeData.dietType === 'vegetarijansko' ? 1 : 0);
-        formData.append('is_vegan', this.recipeData.dietType === 'vegansko' ? 1 : 0);
+        formData.append('diet_type', this.recipeData.dietType || 'ostalo');
         
         // Send to API
         await this.sendToAPI(formData);

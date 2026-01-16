@@ -421,9 +421,11 @@ function displayLatestRecipes() {
         const difficultyLabel = getDifficultyLabel(recipe.difficulty);
         const dietLabel = getDietTypeLabel(recipe);
 
+        const imageSrc = normalizeImageUrl(recipe.image_url);
+
         card.innerHTML = `
             <div class="recipe-image">
-                <img src="${recipe.image_url}" alt="${recipe.title}">
+                <img src="${imageSrc}" alt="${recipe.title}">
                 <button class="favorite-btn ${isFavorited ? 'active' : ''}" data-recipe="${recipe.id}">
                     <i class="${isFavorited ? 'fas' : 'far'} fa-heart"></i>
                 </button>
@@ -483,11 +485,23 @@ function getDifficultyLabel(difficulty) {
 }
 
 function getDietTypeLabel(recipe) {
-    if (recipe.is_vegan) return 'Vegansko';
-    if (recipe.is_vegetarian) return 'Vegetarijansko';
-    if (recipe.is_posno) return 'Posno';
-    if (recipe.is_halal) return 'Halal';
+    const isTrue = (value) => value === true || value === 1 || value === '1';
+    if (isTrue(recipe.is_posno)) return 'Posno';
+    if (isTrue(recipe.is_halal)) return 'Halal';
     return 'Ostalo';
+}
+
+function normalizeImageUrl(imageUrl) {
+    if (!imageUrl) {
+        return '../static/images/logo 5.png';
+    }
+    if (imageUrl.startsWith('http')) {
+        return imageUrl;
+    }
+    if (imageUrl.startsWith('/static/') || imageUrl.startsWith('static/')) {
+        return `${API_BASE_URL}/${imageUrl.replace(/^\//, '')}`;
+    }
+    return `${API_BASE_URL}/static/uploads/${imageUrl}`;
 }
 
 function updateFavoriteButtons() {
@@ -530,6 +544,9 @@ function attachRecipeCardListeners() {
             fetch(`${API_BASE_URL}/recipes/${recipeId}`)
                 .then(response => response.json())
                 .then(recipe => {
+                    if (recipe.image_url) {
+                        document.getElementById('popupImage').src = normalizeImageUrl(recipe.image_url);
+                    }
                     document.getElementById('popupDescription').textContent = recipe.description || 'Nema dostupnog opisa';
 
                     if (recipe.ingredients && recipe.ingredients.length > 0) {

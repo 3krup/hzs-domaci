@@ -184,8 +184,6 @@ function getDifficultyLabel(difficulty) {
 function getDietTypeLabel(dietType) {
     const labels = {
         'posno': 'Posno',
-        'vegetarijansko': 'Vegetarijansko',
-        'vegansko': 'Vegansko',
         'halal': 'Halal'
     };
     return labels[dietType] || dietType;
@@ -322,7 +320,11 @@ async function applyFilters() {
         }
         
         if (activeFilters['tip-ishrane']) {
-            params.append('posno', activeFilters['tip-ishrane'] === 'posno' ? '1' : '0');
+            if (activeFilters['tip-ishrane'] === 'posno') {
+                params.append('posno', '1');
+            } else if (activeFilters['tip-ishrane'] === 'halal') {
+                params.append('halal', '1');
+            }
         }
         
         if (activeFilters['max-minutos']) {
@@ -371,19 +373,16 @@ function filterRecipes(recipes) {
         // Filter by diet type - check all diet options
         if (activeFilters['tip-ishrane']) {
             const dietFilter = activeFilters['tip-ishrane'];
-            let dietMatches = false;
-            
-            if (dietFilter === 'posno' && recipe.is_posno) {
-                dietMatches = true;
-            } else if (dietFilter === 'halal' && recipe.is_halal) {
-                dietMatches = true;
-            } else if (dietFilter === 'vegetarian' && recipe.is_vegetarian) {
-                dietMatches = true;
-            } else if (dietFilter === 'vegan' && recipe.is_vegan) {
-                dietMatches = true;
+            const isPosno = recipe.is_posno === true || recipe.is_posno === 1 || recipe.is_posno === '1';
+            const isHalal = recipe.is_halal === true || recipe.is_halal === 1 || recipe.is_halal === '1';
+
+            if (dietFilter === 'posno' && !isPosno) {
+                return false;
             }
-            
-            if (!dietMatches) {
+            if (dietFilter === 'halal' && !isHalal) {
+                return false;
+            }
+            if (dietFilter === 'ostalo' && (isPosno || isHalal)) {
                 return false;
             }
         }

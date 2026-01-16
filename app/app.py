@@ -182,6 +182,13 @@ def add_recipe(current_user_id):
         is_vegetarian = 1 if request.form.get('is_vegetarian') == '1' else 0
         is_vegan = 1 if request.form.get('is_vegan') == '1' else 0
 
+        diet_type = request.form.get('diet_type', '')
+        if not any([is_posno, is_halal, is_vegetarian, is_vegan]) and diet_type:
+            if diet_type == 'posno':
+                is_posno = 1
+            elif diet_type == 'halal':
+                is_halal = 1
+
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
@@ -356,8 +363,6 @@ def search_recipes():
     difficulty = request.args.get('difficulty')
     is_posno = request.args.get('posno')
     is_halal = request.args.get('halal')
-    is_vegetarian = request.args.get('vegetarian')
-    is_vegan = request.args.get('vegan')
     max_time = request.args.get('max_time')
 
     meal_type = request.args.get('meal_type')
@@ -388,12 +393,6 @@ def search_recipes():
 
     if is_halal == '1' or is_halal == 'true':
         conditions.append("r.is_halal = 1")
-
-    if is_vegetarian == '1' or is_vegetarian == 'true':
-        conditions.append("r.is_vegetarian = 1")
-
-    if is_vegan == '1' or is_vegan == 'true':
-        conditions.append("r.is_vegan = 1")
 
     if max_time:
         conditions.append("r.prep_time_minutes <= %s")
@@ -465,6 +464,56 @@ def get_saved_recipes(current_user_id):
         return jsonify(recipes)
     except MySQLError as e:
         return jsonify({'message': f'Database error: {e}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/saved-recipes', methods=['POST'])
+@token_required
+def save_recipe_by_body(current_user_id):
+    data = request.get_json(silent=True) or {}
+    recipe_id = data.get('recipe_id')
+    if not recipe_id:
+        return jsonify({'message': 'recipe_id je obavezan'}), 400
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'message': 'Database connection failed'}), 500
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO saved_recipes (user_id, recipe_id) VALUES (%s, %s)",
+            (current_user_id, recipe_id)
+        )
+        conn.commit()
+        return jsonify({'message': 'Recept sačuvan!'}), 201
+    except mysql.connector.IntegrityError:
+        return jsonify({'message': 'Već sačuvan'}), 409
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
+    finally:
+        conn.close()
+
+@app.route('/saved-recipes', methods=['DELETE'])
+@token_required
+def unsave_recipe_by_body(current_user_id):
+    data = request.get_json(silent=True) or {}
+    recipe_id = data.get('recipe_id')
+    if not recipe_id:
+        return jsonify({'message': 'recipe_id je obavezan'}), 400
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'message': 'Database connection failed'}), 500
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "DELETE FROM saved_recipes WHERE user_id = %s AND recipe_id = %s",
+            (current_user_id, recipe_id)
+        )
+        conn.commit()
+        return jsonify({'message': 'Uklonjen iz sačuvanih'}), 200
+    except Exception as e:
+        return jsonify({'message': str(e)}), 500
     finally:
         conn.close()
 
