@@ -237,6 +237,7 @@ def get_all_recipes():
     return jsonify(recipes)
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 @app.route('/recipes/latest', methods=['GET'])
 def get_latest_recipes():
     limit = request.args.get('limit', 3, type=int)
@@ -293,6 +294,8 @@ def get_recipe(recipe_id):
     return jsonify(recipe)
 
 
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
 @app.route('/recipes/<int:recipe_id>', methods=['DELETE'])
