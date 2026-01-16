@@ -25,12 +25,9 @@ const recipes = {
             "Servirajte toplo."
         ],
         nutrition: {
-            "Ugljeni hidrati": "8g",
-            "Vlakna": "5g",
-            "Šećer": "2g",
-            "Nasićene masti": "8g",
-            "Holesterol": "425mg",
-            "Natrijum": "520mg"
+            "Kcal": 504,
+            "Protein": "27g",
+            "Masti": "37g"
         }
     },
     piletina: {
@@ -59,12 +56,9 @@ const recipes = {
             "Servirajte sa svežim povrćem."
         ],
         nutrition: {
-            "Ugljeni hidrati": "12g",
-            "Vlakna": "2g",
-            "Šećer": "8g",
-            "Nasićene masti": "3g",
-            "Holesterol": "85mg",
-            "Natrijum": "650mg"
+            "Kcal": 333,
+            "Protein": "36.8g",
+            "Masti": "15.2g"
         }
     },
     brownie: {
@@ -93,12 +87,9 @@ const recipes = {
             "Ostavite da se ohladi pre sečenja."
         ],
         nutrition: {
-            "Ugljeni hidrati": "24g",
-            "Vlakna": "6g",
-            "Šećer": "14g",
-            "Nasićene masti": "5g",
-            "Holesterol": "65mg",
-            "Natrijum": "220mg"
+            "Kcal": 302,
+            "Protein": "23g",
+            "Masti": "17g"
         }
     }
 };
@@ -154,6 +145,18 @@ function updateFavoriteButtons() {
 favoriteButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        
+        // Check if user is logged in
+        if (!authState.isLoggedIn) {
+            authPopup.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            loginForm.classList.add('active');
+            signupForm.classList.remove('active');
+            document.querySelector('.auth-tab[data-tab="login"]').classList.add('active');
+            document.querySelector('.auth-tab[data-tab="signup"]').classList.remove('active');
+            return;
+        }
+        
         const recipeId = btn.dataset.recipe;
         
         if (favorites.includes(recipeId)) {
@@ -313,103 +316,201 @@ authTabs.forEach(tab => {
     });
 });
 
-// Form Validation
-loginForm.addEventListener('submit', (e) => {
+// API Configuration
+const API_CONFIG = { API_BASE_URL };
+
+// Authentication state (from auth.js)
+// authState is defined in auth.js
+
+// Clear error messages
+function clearErrors() {
+    document.querySelectorAll('.error-message').forEach(el => {
+        el.textContent = '';
+    });
+}
+
+// Show error message
+function showError(elementId, message) {
+    const errorEl = document.getElementById(elementId);
+    if (errorEl) {
+        errorEl.textContent = message;
+    }
+}
+
+// Login Form Submission
+loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    clearErrors();
     
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     let isValid = true;
     
-    // Clear previous errors
-    document.getElementById('loginEmailError').textContent = '';
-    document.getElementById('loginPasswordError').textContent = '';
-    
     // Email validation
     if (!email) {
-        document.getElementById('loginEmailError').textContent = 'Email je obavezan';
+        showError('loginEmailError', 'Email je obavezan');
         isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        document.getElementById('loginEmailError').textContent = 'Unesite validan email';
+        showError('loginEmailError', 'Unesite validan email');
         isValid = false;
     }
     
     // Password validation
     if (!password) {
-        document.getElementById('loginPasswordError').textContent = 'Lozinka je obavezna';
+        showError('loginPasswordError', 'Lozinka je obavezna');
         isValid = false;
     }
     
-    if (isValid) {
-        // Simulate API call
-        console.log('Login data:', { email, password });
-        alert('Uspešna prijava! (simulacija)');
-        authPopup.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        loginForm.reset();
+    if (!isValid) return;
+    
+    // Disable submit button during request
+    const submitBtn = loginForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Učitavanje...';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/login`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log('Login successful:', data.message);
+            
+            // Store user email in localStorage
+            const email = document.getElementById('loginEmail').value.trim();
+            setUserEmail(email);
+            
+            authPopup.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            loginForm.reset();
+            submitBtn.textContent = 'Prijavi se';
+            submitBtn.disabled = false;
+            
+            // Update navbar
+            updateNavbarAuth();
+            
+            // Show success message
+            alert(data.message);
+        } else {
+            showError('loginPasswordError', data.message || 'Greška pri prijavi');
+            submitBtn.textContent = 'Prijavi se';
+            submitBtn.disabled = false;
+        }
+    } catch (error) {
+        console.error('Login error:', error);
+        showError('loginPasswordError', 'Greška pri prijavi. Pokušajte kasnije.');
+        submitBtn.textContent = 'Prijavi se';
+        submitBtn.disabled = false;
     }
 });
 
-signupForm.addEventListener('submit', (e) => {
+// Signup Form Submission
+signupForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    clearErrors();
     
-    const name = document.getElementById('signupName').value.trim();
     const email = document.getElementById('signupEmail').value.trim();
     const password = document.getElementById('signupPassword').value.trim();
     const confirmPassword = document.getElementById('signupConfirmPassword').value.trim();
     let isValid = true;
     
-    // Clear previous errors
-    document.getElementById('signupNameError').textContent = '';
-    document.getElementById('signupEmailError').textContent = '';
-    document.getElementById('signupPasswordError').textContent = '';
-    document.getElementById('signupConfirmError').textContent = '';
-    
-    // Name validation
-    if (!name) {
-        document.getElementById('signupNameError').textContent = 'Ime je obavezno';
-        isValid = false;
-    } else if (name.length < 2) {
-        document.getElementById('signupNameError').textContent = 'Ime mora imati najmanje 2 karaktera';
-        isValid = false;
-    }
-    
     // Email validation
     if (!email) {
-        document.getElementById('signupEmailError').textContent = 'Email je obavezan';
+        showError('signupEmailError', 'Email je obavezan');
         isValid = false;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        document.getElementById('signupEmailError').textContent = 'Unesite validan email';
+        showError('signupEmailError', 'Unesite validan email');
         isValid = false;
     }
     
     // Password validation
     if (!password) {
-        document.getElementById('signupPasswordError').textContent = 'Lozinka je obavezna';
+        showError('signupPasswordError', 'Lozinka je obavezna');
         isValid = false;
     } else if (password.length < 6) {
-        document.getElementById('signupPasswordError').textContent = 'Lozinka mora imati najmanje 6 karaktera';
+        showError('signupPasswordError', 'Lozinka mora imati najmanje 6 karaktera');
         isValid = false;
     }
     
     // Confirm password validation
     if (!confirmPassword) {
-        document.getElementById('signupConfirmError').textContent = 'Potvrdite lozinku';
+        showError('signupConfirmError', 'Potvrdite lozinku');
         isValid = false;
     } else if (password !== confirmPassword) {
-        document.getElementById('signupConfirmError').textContent = 'Lozinke se ne poklapaju';
+        showError('signupConfirmError', 'Lozinke se ne poklapaju');
         isValid = false;
     }
     
-    if (isValid) {
-        // Simulate API call
-        console.log('Signup data:', { name, email, password });
-        alert('Uspešna registracija! (simulacija)');
-        authPopup.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        signupForm.reset();
+    if (!isValid) return;
+    
+    // Disable submit button during request
+    const submitBtn = signupForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Učitavanje...';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            console.log('Registration successful:', data.message);
+            alert(data.message);
+            
+            // Switch to login tab
+            document.querySelector('.auth-tab[data-tab="login"]').click();
+            
+            // Clear signup form
+            signupForm.reset();
+            submitBtn.textContent = 'Registruj se';
+            submitBtn.disabled = false;
+        } else {
+            if (response.status === 409) {
+                showError('signupEmailError', data.message || 'Email već postoji!');
+            } else {
+                showError('signupEmailError', data.message || 'Greška pri registraciji');
+            }
+            submitBtn.textContent = 'Registruj se';
+            submitBtn.disabled = false;
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        showError('signupEmailError', 'Greška pri registraciji. Pokušajte kasnije.');
+        submitBtn.textContent = 'Registruj se';
+        submitBtn.disabled = false;
     }
 });
+
+// Logout Popup (using shared function from auth.js)
+function openLogoutPopupMobile() {
+    openLogoutPopup();
+}
+
+// Open auth popup
+function openAuthPopup() {
+    authPopup.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function openAuthPopupMobile() {
+    authPopup.style.display = 'flex';
+    mobileMenu.classList.remove('active');
+    document.body.style.overflow = 'hidden';
+}
 
 // Show back to top button on scroll
 window.addEventListener('scroll', () => {
@@ -443,6 +544,9 @@ document.addEventListener('keydown', (e) => {
 });
 
 // Initialize
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    // Check authentication status and update UI
+    await initializeAuth();
+    
     loadFavorites();
 });

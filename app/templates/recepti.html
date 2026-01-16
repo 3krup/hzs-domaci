@@ -72,7 +72,6 @@
                     <label>Tip ishrane</label>
                     <select id="tipIshrane Filter" class="filter-dropdown">
                         <option value="">Sve</option>
-                        <option value="sa-mesom">Sa mesom</option>
                         <option value="posno">Posno</option>
                         <option value="vegetarijansko">Vegetarijansko</option>
                         <option value="vegansko">Vegansko</option>
@@ -289,11 +288,6 @@
             
             <form id="signupForm" class="auth-form">
                 <div class="form-group">
-                    <label for="fullName">Ime i prezime</label>
-                    <input type="text" id="signupName" name="fullName" required>
-                    <div class="error-message" id="signupNameError"></div>
-                </div>
-                <div class="form-group">
                     <label for="email">Email</label>
                     <input type="email" id="signupEmail" name="email" required>
                     <div class="error-message" id="signupEmailError"></div>
@@ -313,6 +307,7 @@
         </div>
     </div>
 
+    <script src="../static/js/auth.js"></script>
     <script src="../static/js/recepti.js"></script>
 </body>
 </html>

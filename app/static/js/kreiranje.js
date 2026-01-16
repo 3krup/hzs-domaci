@@ -1,3 +1,137 @@
+document.addEventListener('DOMContentLoaded', async () => {
+    console.log('kreiranje.js DOMContentLoaded - checking auth status');
+    const isLoggedIn = await checkAuthStatus();
+    console.log('Auth status:', isLoggedIn);
+    
+    if (!isLoggedIn) {
+        console.log('User not logged in - showing alert');
+        // Show custom alert and redirect
+        showCustomAlert('Morate biti ulogovani da biste kreirali recepte!', 'Pristup odbijen');
+        setTimeout(() => {
+            window.location.href = 'index.html';
+        }, 2000);
+        return;
+    }
+    
+    console.log('User logged in - initializing auth');
+    // Initialize auth UI
+    await initializeAuth();
+    
+    // Initialize recipe creator
+    console.log('Initializing recipe creator');
+    new RecipeCreator();
+    
+    // Fetch and display user's recipes
+    await fetchAndDisplayUserRecipes();
+});
+
+// Check if user is logged in before allowing access
+// Fetch and display user's recipes
+async function fetchAndDisplayUserRecipes() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/my-recipes`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to fetch recipes');
+            return;
+        }
+        
+        const data = await response.json();
+        const recipes = data.recipes || [];
+        
+        console.log('Fetched recipes:', recipes);
+        
+        const recipesGrid = document.querySelector('.recipes-grid');
+        
+        // Clear grid (keep the add recipe card)
+        const addCard = recipesGrid.querySelector('#addRecipeCard');
+        recipesGrid.innerHTML = '';
+        recipesGrid.appendChild(addCard);
+        
+        // Display each recipe
+        recipes.forEach(recipe => {
+            const recipeCard = createRecipeCard(recipe);
+            recipesGrid.appendChild(recipeCard);
+        });
+    } catch (error) {
+        console.error('Error fetching recipes:', error);
+    }
+}
+
+function createRecipeCard(recipe) {
+    const mealTypeLabel = getMealTypeLabel(recipe.meal_type);
+    const difficultyLabel = getDifficultyLabel(recipe.difficulty);
+    const dietLabel = getDietTypeLabel(recipe.diet_type);
+    
+    const card = document.createElement('div');
+    card.className = 'recipe-card';
+    card.innerHTML = `
+        <div class="recipe-image">
+            <img src="${API_BASE_URL}/uploads/${recipe.image_url}" alt="${recipe.title}">
+            <button class="favorite-btn" data-recipe="${recipe.id}">
+                <i class="far fa-heart"></i>
+            </button>
+        </div>
+        <div class="recipe-info">
+            <div class="recipe-tags">
+                <span class="tag tag-meal">${mealTypeLabel}</span>
+                <span class="tag tag-diet">${dietLabel}</span>
+            </div>
+            <h3>${recipe.title}</h3>
+            <div class="recipe-stats">
+                <div class="stat">
+                    <span class="value">${recipe.kcal}</span>
+                    <span class="label">kcal</span>
+                </div>
+                <div class="stat">
+                    <span class="value">${recipe.protein}g</span>
+                    <span class="label">protein</span>
+                </div>
+                <div class="stat">
+                    <span class="value">${recipe.fat}g</span>
+                    <span class="label">masti</span>
+                </div>
+            </div>
+            <p class="difficulty"><i class="fas fa-signal"></i> Slozenost: ${difficultyLabel}</p>
+            <button class="btn-recipe-details">Detaljnije</button>
+        </div>
+    `;
+    
+    return card;
+}
+
+function getMealTypeLabel(mealType) {
+    const labels = {
+        'dorucak': 'Doručak',
+        'rucak': 'Ručak',
+        'vecera': 'Večera',
+        'uzina': 'Užina'
+    };
+    return labels[mealType] || mealType;
+}
+
+function getDifficultyLabel(difficulty) {
+    const labels = {
+        'lako': 'Lako',
+        'srednje': 'Srednje',
+        'tesko': 'Teško'
+    };
+    return labels[difficulty] || difficulty;
+}
+
+function getDietTypeLabel(dietType) {
+    const labels = {
+        'posno': 'Posno',
+        'vegetarijansko': 'Vegetarijansko',
+        'vegansko': 'Vegansko',
+        'halal': 'Halal'
+    };
+    return labels[dietType] || dietType;
+}
+
 // Recipe Creation Form Handler
 class RecipeCreator {
     constructor() {
@@ -6,10 +140,8 @@ class RecipeCreator {
         this.addRecipeCard = document.getElementById('addRecipeCard');
         this.closePopupBtn = document.getElementById('closePopup');
         this.cancelBtn = document.getElementById('cancelBtn');
-        this.addNutritionBtn = document.getElementById('addNutritionBtn');
         this.imagePreview = document.getElementById('imagePreview');
         this.recipeImage = document.getElementById('recipeImage');
-        this.additionalNutrition = document.getElementById('additionalNutrition');
         
         this.recipeData = {
             image: null,
@@ -23,12 +155,10 @@ class RecipeCreator {
             nutrition: {
                 kcal: 0,
                 protein: 0,
-                masti: 0,
-                additional: []
+                masti: 0
             }
         };
         
-        this.additionalNutritionCount = 0;
         this.init();
     }
     
@@ -54,12 +184,6 @@ class RecipeCreator {
         this.imagePreview.addEventListener('click', () => this.recipeImage.click());
         this.recipeImage.addEventListener('change', (e) => this.handleImageUpload(e));
         
-        // Add Additional Nutrition Field
-        this.addNutritionBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            this.addAdditionalNutritionField();
-        });
-        
         // Form Submit
         this.form.addEventListener('submit', (e) => this.handleFormSubmit(e));
         
@@ -84,8 +208,6 @@ class RecipeCreator {
     resetForm() {
         this.form.reset();
         this.imagePreview.classList.remove('has-image');
-        this.additionalNutrition.innerHTML = '';
-        this.additionalNutritionCount = 0;
         this.recipeData = {
             image: null,
             name: '',
@@ -98,8 +220,7 @@ class RecipeCreator {
             nutrition: {
                 kcal: 0,
                 protein: 0,
-                masti: 0,
-                additional: []
+                masti: 0
             }
         };
     }
@@ -107,9 +228,12 @@ class RecipeCreator {
     handleImageUpload(e) {
         const file = e.target.files[0];
         if (file) {
+            // Store the actual file object for FormData
+            this.recipeData.image = file;
+            
+            // Show preview
             const reader = new FileReader();
             reader.onload = (event) => {
-                this.recipeData.image = event.target.result;
                 this.displayImagePreview(event.target.result);
             };
             reader.readAsDataURL(file);
@@ -129,39 +253,6 @@ class RecipeCreator {
         this.imagePreview.appendChild(img);
     }
     
-    addAdditionalNutritionField() {
-        this.additionalNutritionCount++;
-        const fieldId = `additional-nutrition-${this.additionalNutritionCount}`;
-        
-        const container = document.createElement('div');
-        container.className = 'additional-nutrition-item';
-        container.id = fieldId;
-        
-        const nameInput = document.createElement('input');
-        nameInput.type = 'text';
-        nameInput.placeholder = 'Naziv (npr. Ugljeni hidrati)';
-        nameInput.className = 'nutrition-name-input';
-        
-        const valueInput = document.createElement('input');
-        valueInput.type = 'text';
-        valueInput.placeholder = 'Vrednost (npr. 20g)';
-        valueInput.className = 'nutrition-value-input';
-        
-        const removeBtn = document.createElement('button');
-        removeBtn.type = 'button';
-        removeBtn.className = 'btn-remove-nutrition';
-        removeBtn.innerHTML = '<i class="fas fa-trash"></i>';
-        removeBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            container.remove();
-        });
-        
-        container.appendChild(nameInput);
-        container.appendChild(valueInput);
-        container.appendChild(removeBtn);
-        
-        this.additionalNutrition.appendChild(container);
-    }
     
     collectFormData() {
         this.recipeData.name = document.getElementById('recipeName').value;
@@ -188,104 +279,93 @@ class RecipeCreator {
         this.recipeData.nutrition.kcal = parseFloat(document.querySelector('[data-nutrition="kcal"]').value) || 0;
         this.recipeData.nutrition.protein = parseFloat(document.querySelector('[data-nutrition="protein"]').value) || 0;
         this.recipeData.nutrition.masti = parseFloat(document.querySelector('[data-nutrition="masti"]').value) || 0;
-        
-        // Additional nutrition values
-        this.recipeData.nutrition.additional = [];
-        const additionalFields = this.additionalNutrition.querySelectorAll('.additional-nutrition-item');
-        additionalFields.forEach(field => {
-            const nameInput = field.querySelector('.nutrition-name-input').value;
-            const valueInput = field.querySelector('.nutrition-value-input').value;
-            if (nameInput && valueInput) {
-                this.recipeData.nutrition.additional.push({
-                    name: nameInput,
-                    value: valueInput
-                });
-            }
-        });
     }
     
-    handleFormSubmit(e) {
+    async handleFormSubmit(e) {
         e.preventDefault();
         
         // Validate required fields
         if (!this.form.checkValidity()) {
-            alert('Molimo popunite sve obavezne polje');
+            showCustomAlert('Molimo popunite sve obavezne polje', 'Greška');
             return;
         }
         
         // Collect all form data
         this.collectFormData();
         
+        // Validate image
+        if (!this.recipeData.image) {
+            showCustomAlert('Molimo izaberite sliku', 'Greška');
+            return;
+        }
+        
         // Validate ingredients and instructions
         if (this.recipeData.ingredients.length === 0) {
-            alert('Molimo dodajte bar jedan sastojak');
+            showCustomAlert('Molimo dodajte bar jedan sastojak', 'Greška');
             return;
         }
         
         if (this.recipeData.instructions.length === 0) {
-            alert('Molimo dodajte bar jedan korak pripreme');
+            showCustomAlert('Molimo dodajte bar jedan korak pripreme', 'Greška');
             return;
         }
         
-        // Log data for API integration (ready for backend)
-        console.log('Recipe Data Ready for API:', this.recipeData);
+        // Prepare FormData for multipart/form-data
+        const formData = new FormData();
+        formData.append('image', this.recipeData.image);
+        formData.append('title', this.recipeData.name);
+        formData.append('difficulty', this.recipeData.difficulty);
+        formData.append('meal_type', this.recipeData.mealType);
+        formData.append('kcal', this.recipeData.nutrition.kcal);
+        formData.append('protein', this.recipeData.nutrition.protein);
+        formData.append('fat', this.recipeData.nutrition.masti);
+        formData.append('ingredients', this.recipeData.ingredients.join('\n'));
+        formData.append('preparation_steps', this.recipeData.instructions.join('\n'));
         
-        // Prepare data for API
-        const apiPayload = this.prepareAPIPayload();
-        console.log('API Payload:', apiPayload);
-        
-        // TODO: Send to API when available
-        // this.sendToAPI(apiPayload);
-        
-        // Success message
-        alert('Recept je sacuvan!\n\nOvaj recept ce uskoro biti dostupan nakon integracije sa bazom podataka.');
-        this.closePopup();
-        this.resetForm();
+        // Send to API
+        await this.sendToAPI(formData);
     }
     
-    prepareAPIPayload() {
-        return {
-            name: this.recipeData.name,
-            difficulty: this.recipeData.difficulty,
-            prepTime: this.recipeData.prepTime,
-            tags: {
-                meal: this.recipeData.mealType,
-                diet: this.recipeData.dietType
-            },
-            ingredients: this.recipeData.ingredients,
-            instructions: this.recipeData.instructions,
-            nutrition: {
-                kcal: this.recipeData.nutrition.kcal,
-                protein: this.recipeData.nutrition.protein,
-                masti: this.recipeData.nutrition.masti,
-                additional: this.recipeData.nutrition.additional
-            },
-            image: this.recipeData.image, // Base64 or file reference
-            createdAt: new Date().toISOString(),
-            userId: null // Will be set from authentication
-        };
+    async sendToAPI(formData) {
+        const submitBtn = this.form.querySelector('button[type="submit"]');
+        submitBtn.disabled = true;
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Čuvanje...';
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/add-recipe`, {
+                method: 'POST',
+                credentials: 'include',
+                body: formData
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                showCustomAlert('Recept uspešno dodat!', 'Uspeh');
+                this.closePopup();
+                this.resetForm();
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+                
+                // Refresh page after 1 second to show new recipe
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showCustomAlert(data.message || 'Greška pri dodavanju recepta', 'Greška');
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            showCustomAlert('Greška pri dodavanju recepta. Pokušajte kasnije.', 'Greška');
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
+        }
     }
     
-    // Placeholder for API integration
-    sendToAPI(payload) {
-        // TODO: Implement API call
-        // fetch('/api/recipes', {
-        //     method: 'POST',
-        //     headers: {
-        //         'Content-Type': 'application/json',
-        //         'Authorization': `Bearer ${authToken}`
-        //     },
-        //     body: JSON.stringify(payload)
-        // })
-        // .then(response => response.json())
-        // .then(data => {
-        //     console.log('Recipe created:', data);
-        //     this.closePopup();
-        //     this.resetForm();
-        //     // Refresh recipes list
-        // })
-        // .catch(error => console.error('Error:', error));
-    }
+
     
     setupMobileMenu() {
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');

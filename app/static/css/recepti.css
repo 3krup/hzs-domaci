@@ -345,7 +345,7 @@ h1, h2, h3, h4 {
     position: absolute;
     top: 15px;
     right: 15px;
-    background-color: rgba(255, 255, 255, 0.9);
+    background-color: rgba(255, 255, 255, 0.95);
     border: none;
     width: 40px;
     height: 40px;
@@ -358,6 +358,9 @@ h1, h2, h3, h4 {
     color: var(--primary-color);
     transition: var(--transition);
     z-index: 10;
+    opacity: 1 !important;
+    visibility: visible !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .favorite-btn:hover {
